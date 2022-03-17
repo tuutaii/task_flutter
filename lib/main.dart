@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'app/routes/app_pages.dart';
 import 'package:camera/camera.dart';
 
-late List<CameraDescription> cameras;
+List<CameraDescription> cameras = [];
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();

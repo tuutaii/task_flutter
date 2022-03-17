@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../widgets/common/text_input_formatter.dart';
+import '../widgets/textfield_widget.dart';
 
 class InputFormatterView extends StatelessWidget {
   InputFormatterView({Key? key}) : super(key: key);
@@ -39,12 +39,6 @@ class InputFormatterView extends StatelessWidget {
           return "Định dạng ngày không hợp lệ. ";
         }),
     _ExampleMask(
-        formatter: MaskTextInputFormatter(mask: "(AA) ####-####"),
-        hint: "(AB) 1234-5678",
-        validator: (String? value) {
-          return null;
-        }),
-    _ExampleMask(
         formatter: MaskTextInputFormatter(mask: "#### #### #### ####"),
         hint: "1111 2222 3333 4444",
         validator: (String? value) {
@@ -61,72 +55,13 @@ class InputFormatterView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           children: [
             for (final example in examples)
-              buildTextField(example.textController, example.formatter,
-                  example.validator, example.hint),
+              BuildTextField(
+                  textEditingController: example.textController,
+                  textInputFormatter: example.formatter,
+                  validator: example.validator,
+                  hint: example.hint),
           ],
         )));
-  }
-
-  Widget buildTextField(
-      TextEditingController textEditingController,
-      MaskTextInputFormatter textInputFormatter,
-      FormFieldValidator<String> validator,
-      String hint) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        children: [
-          TextFormField(
-            controller: textEditingController,
-            inputFormatters: [
-              const UpperCaseTextFormatter(),
-              textInputFormatter
-            ],
-            autocorrect: false,
-            keyboardType: TextInputType.phone,
-            autovalidateMode: AutovalidateMode.always,
-            validator: validator,
-            decoration: InputDecoration(
-                suffixIcon: IconButton(
-                  icon: const Icon(
-                    Icons.clear,
-                    color: Colors.black,
-                    size: 24,
-                  ),
-                  onPressed: () => textEditingController.clear(),
-                ),
-                hintText: hint,
-                hintStyle: const TextStyle(color: Colors.grey),
-                fillColor: Colors.white,
-                filled: true,
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.black),
-                ),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Colors.grey)),
-                errorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                errorMaxLines: 1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class UpperCaseTextFormatter implements TextInputFormatter {
-  const UpperCaseTextFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    return TextEditingValue(
-        text: newValue.text.toUpperCase(), selection: newValue.selection);
   }
 }
 

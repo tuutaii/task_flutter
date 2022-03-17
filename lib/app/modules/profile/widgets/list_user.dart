@@ -25,9 +25,8 @@ class ListUser extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                radius: 30.0,
+                radius: 40.0,
                 backgroundImage: NetworkImage(member.avatar),
-                backgroundColor: Colors.transparent,
               ),
               const SizedBox(
                 width: 15,
@@ -44,19 +43,13 @@ class ListUser extends StatelessWidget {
                           child: member.name.text
                               .maxLines(1)
                               .overflow(TextOverflow.ellipsis)
-                              .size(12)
+                              .size(14)
                               .black
                               .bold
                               .make(),
                         ),
                         Flexible(
-                          child: '${member.age}'
-                              .text
-                              .maxLines(1)
-                              .overflow(TextOverflow.ellipsis)
-                              .size(10)
-                              .gray400
-                              .make(),
+                          child: '${member.age}'.text.size(10).gray400.make(),
                         ),
                       ],
                     ),
@@ -102,7 +95,7 @@ class ListUser extends StatelessWidget {
               child: member.bio.text
                   .maxLines(2)
                   .overflow(TextOverflow.ellipsis)
-                  .size(10)
+                  .size(13)
                   .bold
                   .make()
                   .box

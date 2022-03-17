@@ -43,7 +43,7 @@ class MemberList extends GetView<ProfileController> {
             horizontal: 10,
             vertical: 5,
           ),
-          child: Wrap(
+          child: Column(
             children: state!.map((e) => ListUser(member: e)).toList(),
           ),
         ),
