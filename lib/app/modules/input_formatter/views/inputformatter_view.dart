@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import '../../../widgets/common/text_input_formatter.dart';
-import '../controllers/inputformatter_controller.dart';
 
-class InputFormatterView extends GetView<InputFormatterController> {
+class InputFormatterView extends StatelessWidget {
   InputFormatterView({Key? key}) : super(key: key);
   final List<_ExampleMask> examples = [
     _ExampleMask(
@@ -47,9 +45,8 @@ class InputFormatterView extends GetView<InputFormatterController> {
           return null;
         }),
     _ExampleMask(
-        formatter: MaskTextInputFormatter(
-            mask: "##/##/##", type: MaskAutoCompletionType.eager),
-        hint: "12/34/56 (eager type)",
+        formatter: MaskTextInputFormatter(mask: "#### #### #### ####"),
+        hint: "1111 2222 3333 4444",
         validator: (String? value) {
           return null;
         }),
