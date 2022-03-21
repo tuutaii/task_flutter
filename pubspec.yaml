@@ -13,9 +13,8 @@ dependencies:
   velocity_x: ^3.4.0
   camera: ^0.9.4+16
   image_picker: ^0.8.4+11
-
-
-  
+  flutter_toggle_tab: ^1.1.7
+  video_player: ^2.3.0
   flutter: 
     sdk: flutter
   intl: ^0.17.0

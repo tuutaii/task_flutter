@@ -19,15 +19,10 @@ class HomeController extends GetxController {
         break;
       case 2:
         {
-          title = 'Media Picker';
-        }
-        break;
-      case 3:
-        {
           title = 'Camera picker';
         }
         break;
-      case 4:
+      case 3:
         {
           title = 'Profile API';
         }

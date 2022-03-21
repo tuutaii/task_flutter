@@ -1,5 +1,4 @@
 import 'package:basesource/app/modules/camera_screen/views/camera_screen_view.dart';
-import 'package:basesource/app/modules/media/views/media_view.dart';
 import 'package:basesource/app/modules/profile/views/profile_view.dart';
 import 'package:basesource/app/modules/tab_web/views/tab_web_view.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +32,7 @@ class HomeView extends StatelessWidget {
               children: [
                 InputFormatterView(),
                 const TabWebView(),
-                const MediaView(),
+                // const MediaView(),
                 const CameraScreenView(),
                 const ProfileView(),
               ],
@@ -64,11 +63,11 @@ class HomeView extends StatelessWidget {
                   ),
                   'Web View',
                 ),
-                buildBottomNavigationMenu(
-                    const Icon(
-                      Icons.photo_camera_outlined,
-                    ),
-                    'Media '),
+                // buildBottomNavigationMenu(
+                //     const Icon(
+                //       Icons.photo_camera_outlined,
+                //     ),
+                //     'Media '),
                 buildBottomNavigationMenu(
                     const Icon(
                       Icons.photo_camera_outlined,
