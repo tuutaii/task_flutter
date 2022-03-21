@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:basesource/app/modules/camera_screen/widgets/display_video.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -161,8 +162,11 @@ class _CameraScreenViewState extends State<CameraScreenView> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            Get.to(DisplayPictureScreen(
-                                imagePath: imageFile!.path));
+                            imageFile != null
+                                ? Get.to(DisplayPictureScreen(
+                                    imagePath: imageFile!.path))
+                                : Get.to(DisplayVideoScreen(
+                                    videoPath: videoController!));
                           },
                           child: Container(
                             width: 60,
@@ -372,6 +376,8 @@ class _CameraScreenViewState extends State<CameraScreenView> {
     }
     try {
       XFile file = await cameraController.takePicture();
+      videoController?.dispose();
+      videoController = null;
       return file;
     } on CameraException catch (e) {
       // ignore: avoid_print
@@ -389,6 +395,7 @@ class _CameraScreenViewState extends State<CameraScreenView> {
       await cameraController!.startVideoRecording();
       setState(() {
         _isRecordingInProgress = true;
+        imageFile = null;
         // ignore: avoid_print
         print(_isRecordingInProgress);
       });
@@ -407,10 +414,12 @@ class _CameraScreenViewState extends State<CameraScreenView> {
       XFile file = await controller.stopVideoRecording();
       setState(() {
         _isRecordingInProgress = false;
+        // ignore: avoid_print
         print(_isRecordingInProgress);
       });
       return file;
     } on CameraException catch (e) {
+      // ignore: avoid_print
       print('Error stopping video recording: $e');
       return null;
     }
