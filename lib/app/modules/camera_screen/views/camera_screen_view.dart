@@ -17,17 +17,22 @@ class CameraScreenView extends StatefulWidget {
   _CameraScreenViewState createState() => _CameraScreenViewState();
 }
 
-class _CameraScreenViewState extends State<CameraScreenView> {
+class _CameraScreenViewState extends State<CameraScreenView>
+    with TickerProviderStateMixin {
   late CameraController controller;
   VideoPlayerController? videoController;
   int camId = 0;
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 5.0;
   double _currentZoomLevel = 1.0;
+  double _baseZoomLevel = 1.0;
 
   double _minAvailableExposureOffset = -4.0;
   double _maxAvailableExposureOffset = 4.0;
   double _currentExposureOffset = 0.0;
+
+  late AnimationController _focusModeControlRowAnimationController;
+  late Animation<double> _focusModeControlRowAnimation;
 
   var tabIndex = 0;
 
@@ -69,12 +74,22 @@ class _CameraScreenViewState extends State<CameraScreenView> {
   void initState() {
     super.initState();
     initCamera(0);
+
+    _focusModeControlRowAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _focusModeControlRowAnimation = CurvedAnimation(
+      parent: _focusModeControlRowAnimationController,
+      curve: Curves.easeInCubic,
+    );
   }
 
   @override
   void dispose() {
     controller.dispose();
     videoController?.dispose();
+
     super.dispose();
   }
 
@@ -84,9 +99,35 @@ class _CameraScreenViewState extends State<CameraScreenView> {
       return Container();
     }
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Stack(
         children: [
-          CameraPreview(controller),
+          CameraPreview(
+            controller,
+            child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+              return GestureDetector(
+                onScaleStart: (detail) {
+                  _currentZoomLevel = _baseZoomLevel;
+                },
+                onScaleUpdate: handleScale,
+                onTapDown: (TapDownDetails details) =>
+                    onViewFinderTap(details, constraints),
+              );
+            }),
+          ),
+          _isRecordingInProgress
+              ? const Align(
+                  alignment: Alignment.topCenter,
+                  child: Text(
+                    'Recording ...',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        decoration: TextDecoration.none),
+                  ),
+                )
+              : const SizedBox(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.end,
@@ -98,7 +139,7 @@ class _CameraScreenViewState extends State<CameraScreenView> {
               Container(
                 alignment: Alignment.bottomCenter,
                 height: 100,
-                color: Colors.black87,
+                color: Colors.black,
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(
@@ -160,44 +201,48 @@ class _CameraScreenViewState extends State<CameraScreenView> {
                             ],
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            imageFile != null
-                                ? Get.to(DisplayPictureScreen(
-                                    imagePath: imageFile!.path))
-                                : Get.to(DisplayVideoScreen(
-                                    videoPath: videoController!));
-                          },
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(50.0),
-                              border: Border.all(color: Colors.white, width: 2),
-                              image: imageFile != null
-                                  ? DecorationImage(
-                                      image: FileImage(File(imageFile!.path)),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            ),
-                            child: videoController != null &&
-                                    videoController!.value.isInitialized
-                                ? CircleAvatar(
-                                    radius: 30,
-                                    child: ClipOval(
-                                        child: VideoPlayer(videoController!)),
-                                  )
-                                : Container(),
-                          ),
-                        )
+                        thumnailImage()
                       ]),
                 ),
               ),
             ],
           )
         ],
+      ),
+    );
+  }
+
+  String timestamp() => DateTime.now().millisecondsSinceEpoch.toString();
+  Widget thumnailImage() {
+    return Hero(
+      tag: 'galley',
+      child: GestureDetector(
+        onTap: () {
+          imageFile != null
+              ? Get.to(() => DisplayPictureScreen(imagePath: imageFile!.path))
+              : Get.to(() => DisplayVideoScreen(videoPath: videoController!));
+        },
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(50.0),
+            border: Border.all(color: Colors.white, width: 2),
+            image: imageFile != null
+                ? DecorationImage(
+                    image: FileImage(File(imageFile!.path)),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: videoController != null && videoController!.value.isInitialized
+              ? CircleAvatar(
+                  radius: 30,
+                  child: ClipOval(child: VideoPlayer(videoController!)),
+                )
+              : Container(),
+        ),
       ),
     );
   }
@@ -356,6 +401,52 @@ class _CameraScreenViewState extends State<CameraScreenView> {
     );
   }
 
+  void handleScale(detail) async {
+    _currentZoomLevel = (_baseZoomLevel * detail.scale)
+        .clamp(_minAvailableZoom, _maxAvailableZoom);
+    await controller.setZoomLevel(_currentZoomLevel);
+    setState(() {
+      _currentZoomLevel;
+    });
+  }
+
+  void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
+    if (controller == null) {
+      return;
+    }
+
+    final CameraController cameraController = controller;
+
+    final Offset offset = Offset(
+      details.localPosition.dx / constraints.maxWidth,
+      details.localPosition.dy / constraints.maxHeight,
+    );
+    cameraController.setExposurePoint(offset);
+    cameraController.setFocusPoint(offset);
+  }
+
+  void onSetFocusModeButtonPressed(FocusMode mode) {
+    setFocusMode(mode).then((_) {
+      if (mounted) {
+        setState(() {});
+      }
+      // showInSnackBar('Focus mode set to ${mode.toString().split('.').last}');
+    });
+  }
+
+  Future<void> setFocusMode(FocusMode mode) async {
+    if (controller == null) {
+      return;
+    }
+
+    try {
+      await controller.setFocusMode(mode);
+    } on CameraException catch (e) {
+      print(e);
+      rethrow;
+    }
+  }
+
   Future<void> _startVideoPlayer() async {
     if (videoFile != null) {
       videoController = VideoPlayerController.file(File(videoFile!.path));
@@ -433,7 +524,7 @@ class _CameraScreenViewState extends State<CameraScreenView> {
     try {
       await controller.pauseVideoRecording();
     } on CameraException catch (e) {
-      print('Error pausing video recording: $e');
+      debugPrint('Error pausing video recording: $e');
     }
   }
 
@@ -445,6 +536,7 @@ class _CameraScreenViewState extends State<CameraScreenView> {
     try {
       await controller.resumeVideoRecording();
     } on CameraException catch (e) {
+      // ignore: avoid_print
       print('Error resuming video recording: $e');
     }
   }

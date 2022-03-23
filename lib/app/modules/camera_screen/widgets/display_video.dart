@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -12,7 +10,8 @@ class DisplayVideoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        backgroundColor: Colors.black,
         appBar: AppBar(title: const Text('Display the Videos')),
-        body: VideoPlayer(videoPath));
+        body: Hero(tag: 'galley', child: VideoPlayer(videoPath)));
   }
 }

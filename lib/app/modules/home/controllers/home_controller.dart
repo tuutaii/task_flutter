@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 
 class HomeController extends GetxController {
   var selectedIndex = 0;
-  var title = '';
+  var title = 'Input Formatter';
 
   void changeTabIndex(int index) {
     selectedIndex = index;

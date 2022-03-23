@@ -1,6 +1,7 @@
 import 'package:basesource/app/modules/camera_screen/views/camera_screen_view.dart';
 import 'package:basesource/app/modules/profile/views/profile_view.dart';
 import 'package:basesource/app/modules/tab_web/views/tab_web_view.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../input_formatter/views/inputformatter_view.dart';
@@ -54,12 +55,12 @@ class HomeView extends StatelessWidget {
               type: BottomNavigationBarType.fixed,
               items: [
                 buildBottomNavigationMenu(
-                  const Icon(Icons.keyboard),
-                  'Home',
+                  const Icon(CupertinoIcons.textformat_alt),
+                  'Input Formatter',
                 ),
                 buildBottomNavigationMenu(
                   const Icon(
-                    Icons.language_outlined,
+                    CupertinoIcons.search,
                   ),
                   'Web View',
                 ),
@@ -70,11 +71,11 @@ class HomeView extends StatelessWidget {
                 //     'Media '),
                 buildBottomNavigationMenu(
                     const Icon(
-                      Icons.photo_camera_outlined,
+                      CupertinoIcons.camera,
                     ),
                     'Camera '),
                 buildBottomNavigationMenu(
-                  const Icon(Icons.person),
+                  const Icon(CupertinoIcons.person),
                   'Profile',
                 ),
               ]));
@@ -95,7 +96,10 @@ buildBottomNavigationMenu(
   String lable,
 ) {
   return BottomNavigationBarItem(
-      icon: Container(margin: const EdgeInsets.only(bottom: 7), child: icon),
+      icon: Container(
+        margin: const EdgeInsets.only(bottom: 7),
+        child: icon,
+      ),
       label: lable,
       backgroundColor: Colors.blue);
 }

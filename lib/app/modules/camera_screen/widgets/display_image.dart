@@ -11,8 +11,9 @@ class DisplayPictureScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(title: const Text('Display the Picture')),
-      body: Image.file(File(imagePath)),
+      body: Hero(tag: 'galley', child: Image.file(File(imagePath))),
     );
   }
 }
