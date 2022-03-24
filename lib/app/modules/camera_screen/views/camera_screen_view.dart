@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:io';
-
 import 'package:basesource/app/modules/camera_screen/widgets/display_video.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
@@ -22,17 +22,18 @@ class _CameraScreenViewState extends State<CameraScreenView>
   late CameraController controller;
   VideoPlayerController? videoController;
   int camId = 0;
+
+  Timer? timer;
+  Duration duration = Duration();
+
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 5.0;
   double _currentZoomLevel = 1.0;
-  double _baseZoomLevel = 1.0;
+  final double _baseZoomLevel = 1.0;
 
   double _minAvailableExposureOffset = -4.0;
   double _maxAvailableExposureOffset = 4.0;
   double _currentExposureOffset = 0.0;
-
-  late AnimationController _focusModeControlRowAnimationController;
-  late Animation<double> _focusModeControlRowAnimation;
 
   var tabIndex = 0;
 
@@ -57,14 +58,12 @@ class _CameraScreenViewState extends State<CameraScreenView>
       setState(() {
         controller.getMaxZoomLevel().then((value) => _maxAvailableZoom = value);
         controller.getMinZoomLevel().then((value) => _minAvailableZoom = value);
-
         controller
             .getMinExposureOffset()
             .then((value) => _minAvailableExposureOffset = value);
         controller
             .getMaxExposureOffset()
             .then((value) => _maxAvailableExposureOffset = value);
-
         _currentFlash = controller.value.flashMode;
       });
     });
@@ -74,15 +73,6 @@ class _CameraScreenViewState extends State<CameraScreenView>
   void initState() {
     super.initState();
     initCamera(0);
-
-    _focusModeControlRowAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _focusModeControlRowAnimation = CurvedAnimation(
-      parent: _focusModeControlRowAnimationController,
-      curve: Curves.easeInCubic,
-    );
   }
 
   @override
@@ -98,35 +88,42 @@ class _CameraScreenViewState extends State<CameraScreenView>
     if (!controller.value.isInitialized) {
       return Container();
     }
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Stack(
+    return Scaffold(
+      body: Stack(
         children: [
-          CameraPreview(
-            controller,
-            child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-              return GestureDetector(
-                onScaleStart: (detail) {
-                  _currentZoomLevel = _baseZoomLevel;
-                },
-                onScaleUpdate: handleScale,
-                onTapDown: (TapDownDetails details) =>
-                    onViewFinderTap(details, constraints),
-              );
-            }),
+          SizedBox(
+            height: double.infinity,
+            child: CameraPreview(
+              controller,
+              child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                return GestureDetector(
+                  onScaleStart: (detail) {
+                    _currentZoomLevel = _baseZoomLevel;
+                  },
+                  onScaleUpdate: handleScale,
+                  onTapDown: (TapDownDetails details) =>
+                      onViewFinderTap(details, constraints),
+                );
+              }),
+            ),
           ),
           _isRecordingInProgress
-              ? const Align(
+              ? Align(
                   alignment: Alignment.topCenter,
-                  child: Text(
-                    'Recording ...',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        decoration: TextDecoration.none),
-                  ),
-                )
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 30),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.network(
+                          'https://upload.wikimedia.org/wikipedia/commons/4/41/Red_circle.gif',
+                          height: 30,
+                        ),
+                        buildTime(),
+                      ],
+                    ),
+                  ))
               : const SizedBox(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -138,8 +135,10 @@ class _CameraScreenViewState extends State<CameraScreenView>
               switchCamera(),
               Container(
                 alignment: Alignment.bottomCenter,
-                height: 100,
-                color: Colors.black,
+                height: 150,
+                color: _isVideoCameraSelected
+                    ? Colors.black.withOpacity(.2)
+                    : Colors.black,
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(
@@ -164,8 +163,10 @@ class _CameraScreenViewState extends State<CameraScreenView>
                                   if (_isRecordingInProgress) {
                                     videoFile = await stopVideoRecording();
                                     _startVideoPlayer();
+                                    cancleTimer();
                                   } else {
                                     await startVideoRecording();
+                                    startTimer();
                                   }
                                 }
                               : () async {
@@ -212,7 +213,22 @@ class _CameraScreenViewState extends State<CameraScreenView>
     );
   }
 
-  String timestamp() => DateTime.now().millisecondsSinceEpoch.toString();
+  Widget buildTime() {
+    String TwoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = TwoDigits(duration.inHours.remainder(60));
+    final minutes = TwoDigits(duration.inMinutes.remainder(60));
+    final seconds = TwoDigits(duration.inSeconds.remainder(60));
+    return Text(
+      '$hours:$minutes:$seconds',
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          decoration: TextDecoration.none),
+    );
+  }
+
   Widget thumnailImage() {
     return Hero(
       tag: 'galley',
@@ -401,6 +417,26 @@ class _CameraScreenViewState extends State<CameraScreenView>
     );
   }
 
+  void addTime() {
+    const addSeconds = 1;
+    setState(() {
+      final seconds = duration.inSeconds + addSeconds;
+      duration = Duration(seconds: seconds);
+    });
+  }
+
+  void startTimer() {
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => addTime());
+    print(duration.inSeconds);
+  }
+
+  void cancleTimer() {
+    setState(() {
+      duration = const Duration();
+      timer?.cancel();
+    });
+  }
+
   void handleScale(detail) async {
     _currentZoomLevel = (_baseZoomLevel * detail.scale)
         .clamp(_minAvailableZoom, _maxAvailableZoom);
@@ -411,6 +447,7 @@ class _CameraScreenViewState extends State<CameraScreenView>
   }
 
   void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
+    // ignore: unnecessary_null_comparison
     if (controller == null) {
       return;
     }
@@ -425,16 +462,8 @@ class _CameraScreenViewState extends State<CameraScreenView>
     cameraController.setFocusPoint(offset);
   }
 
-  void onSetFocusModeButtonPressed(FocusMode mode) {
-    setFocusMode(mode).then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-      // showInSnackBar('Focus mode set to ${mode.toString().split('.').last}');
-    });
-  }
-
   Future<void> setFocusMode(FocusMode mode) async {
+    // ignore: unnecessary_null_comparison
     if (controller == null) {
       return;
     }
@@ -442,6 +471,7 @@ class _CameraScreenViewState extends State<CameraScreenView>
     try {
       await controller.setFocusMode(mode);
     } on CameraException catch (e) {
+      // ignore: avoid_print
       print(e);
       rethrow;
     }
@@ -498,7 +528,6 @@ class _CameraScreenViewState extends State<CameraScreenView>
 
   Future<XFile?> stopVideoRecording() async {
     if (!controller.value.isRecordingVideo) {
-      // Recording is already is stopped state
       return null;
     }
     try {
