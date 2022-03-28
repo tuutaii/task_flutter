@@ -4,8 +4,6 @@ import 'package:basesource/app/modules/camera_screen/widgets/display_video.dart'
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_toggle_tab/flutter_toggle_tab.dart';
-import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../main.dart';
 import '../widgets/display_image.dart';
@@ -19,31 +17,30 @@ class CameraScreenView extends StatefulWidget {
 
 class _CameraScreenViewState extends State<CameraScreenView>
     with TickerProviderStateMixin {
-  late CameraController controller;
+  CameraController? controller;
   VideoPlayerController? videoController;
-  int camId = 0;
+
+  final camId = ValueNotifier(0);
 
   Timer? timer;
-  Duration duration = Duration();
+  Duration duration = const Duration();
 
-  double _minAvailableZoom = 1.0;
-  double _maxAvailableZoom = 5.0;
-  double _currentZoomLevel = 1.0;
-  final double _baseZoomLevel = 1.0;
+  late TabBar tabbar;
 
-  double _minAvailableExposureOffset = -4.0;
-  double _maxAvailableExposureOffset = 4.0;
-  double _currentExposureOffset = 0.0;
+  // ignore: prefer_final_fields
+  double _minAvailableZoom = 1.0, _maxAvailableZoom = 5.0, _baseZoomLevel = 1.0;
+  final _curentZoom = ValueNotifier(1.0);
+
+  double _minAvailableExposureOffset = -4.0, _maxAvailableExposureOffset = 4.0;
+  final _currentExposureOffset = ValueNotifier(0.0);
 
   var tabIndex = 0;
 
-  FlashMode? _currentFlash;
+  late TabController tabController;
 
-  bool _isVideoCameraSelected = false;
-  bool _isRecordingInProgress = false;
+  bool _isVideoCameraSelected = false, _isRecordingInProgress = false;
 
-  XFile? imageFile;
-  XFile? videoFile;
+  XFile? imageFile, videoFile;
 
   void initCamera(int cameraId) {
     controller = CameraController(
@@ -51,20 +48,23 @@ class _CameraScreenViewState extends State<CameraScreenView>
       ResolutionPreset.max,
     );
 
-    controller.initialize().then((_) {
+    controller!.initialize().then((_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        controller.getMaxZoomLevel().then((value) => _maxAvailableZoom = value);
-        controller.getMinZoomLevel().then((value) => _minAvailableZoom = value);
-        controller
+        controller!
+            .getMaxZoomLevel()
+            .then((value) => _maxAvailableZoom = value);
+        controller!
+            .getMinZoomLevel()
+            .then((value) => _minAvailableZoom = value);
+        controller!
             .getMinExposureOffset()
             .then((value) => _minAvailableExposureOffset = value);
-        controller
+        controller!
             .getMaxExposureOffset()
             .then((value) => _maxAvailableExposureOffset = value);
-        _currentFlash = controller.value.flashMode;
       });
     });
   }
@@ -73,19 +73,20 @@ class _CameraScreenViewState extends State<CameraScreenView>
   void initState() {
     super.initState();
     initCamera(0);
+    tabController = TabController(length: 2, vsync: this);
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    controller?.dispose();
     videoController?.dispose();
-
+    tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.value.isInitialized) {
+    if (!controller!.value.isInitialized) {
       return Container();
     }
     return Scaffold(
@@ -93,34 +94,36 @@ class _CameraScreenViewState extends State<CameraScreenView>
         children: [
           SizedBox(
             height: double.infinity,
-            child: CameraPreview(
-              controller,
-              child: LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) {
-                return GestureDetector(
-                  onScaleStart: (detail) {
-                    _currentZoomLevel = _baseZoomLevel;
-                  },
-                  onScaleUpdate: handleScale,
-                  onTapDown: (TapDownDetails details) =>
-                      onViewFinderTap(details, constraints),
+            child: ValueListenableBuilder(
+              valueListenable: _curentZoom,
+              builder: (_, double val, __) {
+                return CameraPreview(
+                  controller!,
+                  child: LayoutBuilder(builder:
+                      (BuildContext context, BoxConstraints constraints) {
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onScaleUpdate: handleScale,
+                    );
+                  }),
                 );
-              }),
+              },
             ),
           ),
+          FlashModeCamera(controller: controller),
           _isRecordingInProgress
               ? Align(
                   alignment: Alignment.topCenter,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 30),
+                    padding: const EdgeInsets.only(top: 50),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.network(
-                          'https://upload.wikimedia.org/wikipedia/commons/4/41/Red_circle.gif',
+                        Image.asset(
+                          'assets/images/red_circle.gif',
                           height: 30,
                         ),
-                        buildTime(),
+                        BuildTime(duration: duration),
                       ],
                     ),
                   ))
@@ -129,81 +132,92 @@ class _CameraScreenViewState extends State<CameraScreenView>
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              increExposure(),
-              zoomCamera(),
-              flashMode(),
-              switchCamera(),
+              IncreaseExposure(
+                  currentExposureOffset: _currentExposureOffset,
+                  minAvailableExposureOffset: _minAvailableExposureOffset,
+                  maxAvailableExposureOffset: _maxAvailableExposureOffset,
+                  controller: controller),
               Container(
                 alignment: Alignment.bottomCenter,
-                height: 150,
                 color: _isVideoCameraSelected
                     ? Colors.black.withOpacity(.2)
                     : Colors.black,
                 child: Padding(
                   padding: const EdgeInsets.all(10),
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        IconButton(
-                            onPressed: () {
-                              setState(() {
-                                camId == 0
-                                    ? {initCamera(1), camId = 1}
-                                    : {initCamera(0), camId = 0};
-                              });
-                            },
-                            icon: const Icon(
-                              CupertinoIcons.switch_camera_solid,
-                              color: Colors.white,
-                              size: 40,
-                            )),
-                        InkWell(
-                          onTap: _isVideoCameraSelected
-                              ? () async {
-                                  if (_isRecordingInProgress) {
-                                    videoFile = await stopVideoRecording();
-                                    _startVideoPlayer();
-                                    cancleTimer();
-                                  } else {
-                                    await startVideoRecording();
-                                    startTimer();
-                                  }
-                                }
-                              : () async {
-                                  imageFile = await takePicture();
-                                  setState(() {
-                                    imageFile;
-                                  });
-                                },
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.circle,
-                                color: _isVideoCameraSelected
-                                    ? Colors.white
-                                    : Colors.white38,
-                                size: 80,
-                              ),
-                              Icon(
-                                Icons.circle,
-                                color: _isVideoCameraSelected
-                                    ? Colors.red
-                                    : Colors.white,
-                                size: 65,
-                              ),
-                              _isVideoCameraSelected && _isRecordingInProgress
-                                  ? const Icon(
-                                      Icons.stop_rounded,
+                  child: Column(
+                    children: [
+                      switchCamera(),
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            ValueListenableBuilder(
+                              valueListenable: camId,
+                              builder: (_, int val, __) {
+                                return IconButton(
+                                    onPressed: () {
+                                      camId.value == 0
+                                          ? {initCamera(1), camId.value = 1}
+                                          : {initCamera(0), camId.value = 0};
+                                    },
+                                    icon: const Icon(
+                                      CupertinoIcons.switch_camera_solid,
                                       color: Colors.white,
-                                      size: 32,
-                                    )
-                                  : Container(),
-                            ],
-                          ),
-                        ),
-                        thumnailImage()
-                      ]),
+                                      size: 30,
+                                    ));
+                              },
+                            ),
+                            InkWell(
+                              onTap: _isVideoCameraSelected
+                                  ? () async {
+                                      if (_isRecordingInProgress) {
+                                        videoFile = await stopVideoRecording();
+                                        startVideoPlayer();
+                                        cancelTimer();
+                                      } else {
+                                        await startVideoRecording();
+                                        startTimer();
+                                      }
+                                    }
+                                  : () async {
+                                      imageFile = await takePicture();
+                                      setState(() {
+                                        imageFile;
+                                      });
+                                    },
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.circle,
+                                    color: _isVideoCameraSelected
+                                        ? Colors.white
+                                        : Colors.white38,
+                                    size: 80,
+                                  ),
+                                  Icon(
+                                    Icons.circle,
+                                    color: _isVideoCameraSelected
+                                        ? Colors.red
+                                        : Colors.white,
+                                    size: 65,
+                                  ),
+                                  _isVideoCameraSelected &&
+                                          _isRecordingInProgress
+                                      ? const Icon(
+                                          Icons.stop_rounded,
+                                          color: Colors.white,
+                                          size: 32,
+                                        )
+                                      : Container(),
+                                ],
+                              ),
+                            ),
+                            Thumbnail(
+                                videoController: videoController,
+                                imageFile: imageFile)
+                          ]),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -213,34 +227,212 @@ class _CameraScreenViewState extends State<CameraScreenView>
     );
   }
 
-  Widget buildTime() {
-    String TwoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = TwoDigits(duration.inHours.remainder(60));
-    final minutes = TwoDigits(duration.inMinutes.remainder(60));
-    final seconds = TwoDigits(duration.inSeconds.remainder(60));
-    return Text(
-      '$hours:$minutes:$seconds',
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          decoration: TextDecoration.none),
+  Widget switchCamera() {
+    return SizedBox(
+      height: 50,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TabBar(
+            indicator: BoxDecoration(
+                border: Border.all(color: Colors.white),
+                borderRadius: BorderRadius.circular(50),
+                color: Colors.transparent),
+            isScrollable: true,
+            unselectedLabelColor: Colors.grey,
+            labelColor: Colors.white,
+            labelStyle:
+                const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            tabs: const [
+              Tab(
+                child: Text('Camera'),
+              ),
+              Tab(
+                child: Text('Video'),
+              ),
+            ],
+            controller: tabController,
+            indicatorColor: Colors.white,
+            onTap: (index) {
+              index == 0
+                  ? _isVideoCameraSelected = false
+                  : _isVideoCameraSelected = true;
+              changeColorButton();
+            },
+          ),
+        ),
+      ),
     );
   }
 
-  Widget thumnailImage() {
+  void changeColorButton() {
+    tabController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  void addTime() {
+    const addSeconds = 1;
+    setState(() {
+      final seconds = duration.inSeconds + addSeconds;
+      duration = Duration(seconds: seconds);
+    });
+  }
+
+  void startTimer() {
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => addTime());
+  }
+
+  void cancelTimer() {
+    setState(() {
+      duration = const Duration();
+      timer?.cancel();
+    });
+  }
+
+  void handleScale(detail) {
+    _curentZoom.value = (_baseZoomLevel * detail.scale)
+        .clamp(_minAvailableZoom, _maxAvailableZoom);
+    controller?.setZoomLevel(_curentZoom.value);
+  }
+
+  Future<void> startVideoPlayer() async {
+    if (videoFile != null) {
+      videoController = VideoPlayerController.file(File(videoFile!.path));
+      await videoController!.initialize().then((_) {
+        // Ensure the first frame is shown after the video is initialized,
+        // even before the play button has been pressed.
+        setState(() {});
+      });
+      await videoController!.setLooping(true);
+      await videoController!.play();
+    }
+  }
+
+  Future<XFile?> takePicture() async {
+    if (controller!.value.isTakingPicture) {
+      return null;
+    }
+    try {
+      XFile file = await controller!.takePicture();
+      videoController?.dispose();
+      videoController = null;
+      return file;
+    } on CameraException catch (e) {
+      // ignore: avoid_print
+      print('Error occured while taking picture: $e');
+      return null;
+    }
+  }
+
+  Future<void> startVideoRecording() async {
+    if (controller!.value.isRecordingVideo) {
+      return;
+    }
+    try {
+      await controller?.startVideoRecording();
+      setState(() {
+        _isRecordingInProgress = true;
+        imageFile = null;
+        // ignore: avoid_print
+        print(_isRecordingInProgress);
+      });
+    } on CameraException catch (e) {
+      // ignore: avoid_print
+      print('Error starting to record video: $e');
+    }
+  }
+
+  Future<XFile?> stopVideoRecording() async {
+    if (!controller!.value.isRecordingVideo) {
+      return null;
+    }
+    try {
+      XFile file = await controller!.stopVideoRecording();
+      setState(() {
+        _isRecordingInProgress = false;
+        // ignore: avoid_print
+        print(_isRecordingInProgress);
+      });
+      return file;
+    } on CameraException catch (e) {
+      // ignore: avoid_print
+      print('Error stopping video recording: $e');
+      return null;
+    }
+  }
+
+  Future<void> pauseVideoRecording() async {
+    if (!controller!.value.isRecordingVideo) {
+      // Video recording is not in progress
+      return;
+    }
+    try {
+      await controller!.pauseVideoRecording();
+    } on CameraException catch (e) {
+      debugPrint('Error pausing video recording: $e');
+    }
+  }
+
+  Future<void> resumeVideoRecording() async {
+    if (!controller!.value.isRecordingVideo) {
+      // No video recording was in progress
+      return;
+    }
+    try {
+      await controller!.resumeVideoRecording();
+    } on CameraException catch (e) {
+      // ignore: avoid_print
+      print('Error resuming video recording: $e');
+    }
+  }
+}
+
+class Thumbnail extends StatelessWidget {
+  const Thumbnail({
+    Key? key,
+    required this.videoController,
+    required this.imageFile,
+  }) : super(key: key);
+
+  final VideoPlayerController? videoController;
+  final XFile? imageFile;
+
+  @override
+  Widget build(BuildContext context) {
     return Hero(
       tag: 'galley',
       child: GestureDetector(
         onTap: () {
-          imageFile != null
-              ? Get.to(() => DisplayPictureScreen(imagePath: imageFile!.path))
-              : Get.to(() => DisplayVideoScreen(videoPath: videoController!));
+          if (videoController == null && imageFile == null) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => DisplayPictureScreen(
+                          imagePath: imageFile?.path,
+                        )));
+          }
+          if (imageFile != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => DisplayPictureScreen(
+                        imagePath: imageFile!.path,
+                      )),
+            );
+          } else if (videoController != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => DisplayVideoScreen(
+                        videoPath: videoController,
+                      )),
+            );
+          }
         },
         child: Container(
-          width: 60,
-          height: 60,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             color: Colors.black,
             borderRadius: BorderRadius.circular(50.0),
@@ -262,311 +454,187 @@ class _CameraScreenViewState extends State<CameraScreenView>
       ),
     );
   }
+}
 
-  Widget switchCamera() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: FlutterToggleTab(
-          isShadowEnable: true,
-          selectedIndex: tabIndex,
-          width: 80,
-          borderRadius: 16,
-          height: 46,
-          selectedBackgroundColors: const [Colors.white],
-          selectedTextStyle: const TextStyle(
-            color: Colors.black,
-          ),
-          unSelectedTextStyle: const TextStyle(color: Colors.black54),
-          labels: const ['Camera', 'Video'],
-          selectedLabelIndex: (index) {
-            setState(() {
-              tabIndex = index;
-              if (index == 0) {
-                _isVideoCameraSelected = false;
-              } else {
-                _isVideoCameraSelected = true;
-              }
-            });
-          },
+class IncreaseExposure extends StatelessWidget {
+  const IncreaseExposure({
+    Key? key,
+    required ValueNotifier<double> currentExposureOffset,
+    required double minAvailableExposureOffset,
+    required double maxAvailableExposureOffset,
+    required this.controller,
+  })  : _currentExposureOffset = currentExposureOffset,
+        _minAvailableExposureOffset = minAvailableExposureOffset,
+        _maxAvailableExposureOffset = maxAvailableExposureOffset,
+        super(key: key);
+
+  final ValueNotifier<double> _currentExposureOffset;
+  final double _minAvailableExposureOffset;
+  final double _maxAvailableExposureOffset;
+  final CameraController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: SizedBox(
+        width: 50,
+        child: Column(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(.5),
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FittedBox(
+                  child: ValueListenableBuilder(
+                    valueListenable: _currentExposureOffset,
+                    builder: (_, double val, __) {
+                      return Text(
+                        val.toStringAsFixed(1) + 'x',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          decoration: TextDecoration.none,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            RotatedBox(
+              quarterTurns: 3,
+              child: SizedBox(
+                height: 30,
+                child: ValueListenableBuilder(
+                    valueListenable: _currentExposureOffset,
+                    builder: (_, double val, __) {
+                      return Slider(
+                        value: val,
+                        min: _minAvailableExposureOffset,
+                        max: _maxAvailableExposureOffset,
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.white30,
+                        onChanged: (value) {
+                          _currentExposureOffset.value = value;
+                          controller!.setExposureOffset(value);
+                        },
+                      );
+                    }),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget flashMode() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        InkWell(
-          onTap: () async {
-            setState(() {
-              _currentFlash = FlashMode.off;
-            });
-            await controller.setFlashMode(
-              FlashMode.off,
-            );
-          },
-          child: Icon(
-            Icons.flash_off,
-            color: _currentFlash == FlashMode.off ? Colors.amber : Colors.white,
-          ),
-        ),
-        InkWell(
-          onTap: () async {
-            setState(() {
-              _currentFlash = FlashMode.torch;
-            });
-            await controller.setFlashMode(
-              FlashMode.torch,
-            );
-          },
-          child: Icon(
-            Icons.highlight,
-            color:
-                _currentFlash == FlashMode.torch ? Colors.amber : Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
+class FlashModeCamera extends StatefulWidget {
+  const FlashModeCamera({
+    Key? key,
+    required this.controller,
+  }) : super(key: key);
 
-  Widget increExposure() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(.5),
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                _currentExposureOffset.toStringAsFixed(1) + 'x',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    decoration: TextDecoration.none),
-              ),
-            ),
-          ),
-          RotatedBox(
-            quarterTurns: 3,
-            child: SizedBox(
-              height: 30,
-              child: Slider(
-                value: _currentExposureOffset,
-                min: _minAvailableExposureOffset,
-                max: _maxAvailableExposureOffset,
-                activeColor: Colors.white,
-                inactiveColor: Colors.white30,
-                onChanged: (value) async {
-                  setState(() {
-                    _currentExposureOffset = value;
-                  });
-                  await controller.setExposureOffset(value);
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  final CameraController? controller;
 
-  Widget zoomCamera() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
+  @override
+  State<FlashModeCamera> createState() => _FlashModeCameraState();
+}
+
+class _FlashModeCameraState extends State<FlashModeCamera> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 50,
+      color: Colors.black.withOpacity(.5),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Expanded(
-            child: Slider(
-              value: _currentZoomLevel,
-              min: _minAvailableZoom,
-              max: _maxAvailableZoom,
-              activeColor: Colors.white,
-              inactiveColor: Colors.white30,
-              onChanged: (value) async {
-                setState(() {
-                  _currentZoomLevel = value;
-                });
-                await controller.setZoomLevel(value);
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.flash_off),
+            color: widget.controller!.value.flashMode == FlashMode.off
+                ? Colors.orange
+                : Colors.white,
+            onPressed: widget.controller != null
+                ? () => onSetFlashModeButtonPressed(FlashMode.off)
+                : null,
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(.5),
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                _currentZoomLevel.toStringAsFixed(1) + 'x',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    decoration: TextDecoration.none),
-              ),
-            ),
+          IconButton(
+            icon: const Icon(Icons.flash_auto),
+            color: widget.controller!.value.flashMode == FlashMode.auto
+                ? Colors.orange
+                : Colors.white,
+            onPressed: widget.controller != null
+                ? () => onSetFlashModeButtonPressed(FlashMode.auto)
+                : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.flash_on),
+            color: widget.controller!.value.flashMode == FlashMode.always
+                ? Colors.orange
+                : Colors.white,
+            onPressed: widget.controller != null
+                ? () => onSetFlashModeButtonPressed(FlashMode.always)
+                : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.highlight),
+            color: widget.controller!.value.flashMode == FlashMode.torch
+                ? Colors.orange
+                : Colors.white,
+            onPressed: widget.controller != null
+                ? () => onSetFlashModeButtonPressed(FlashMode.torch)
+                : null,
           ),
         ],
       ),
     );
   }
 
-  void addTime() {
-    const addSeconds = 1;
-    setState(() {
-      final seconds = duration.inSeconds + addSeconds;
-      duration = Duration(seconds: seconds);
-    });
-  }
-
-  void startTimer() {
-    timer = Timer.periodic(const Duration(seconds: 1), (_) => addTime());
-    print(duration.inSeconds);
-  }
-
-  void cancleTimer() {
-    setState(() {
-      duration = const Duration();
-      timer?.cancel();
-    });
-  }
-
-  void handleScale(detail) async {
-    _currentZoomLevel = (_baseZoomLevel * detail.scale)
-        .clamp(_minAvailableZoom, _maxAvailableZoom);
-    await controller.setZoomLevel(_currentZoomLevel);
-    setState(() {
-      _currentZoomLevel;
-    });
-  }
-
-  void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
-    // ignore: unnecessary_null_comparison
-    if (controller == null) {
-      return;
-    }
-
-    final CameraController cameraController = controller;
-
-    final Offset offset = Offset(
-      details.localPosition.dx / constraints.maxWidth,
-      details.localPosition.dy / constraints.maxHeight,
-    );
-    cameraController.setExposurePoint(offset);
-    cameraController.setFocusPoint(offset);
-  }
-
-  Future<void> setFocusMode(FocusMode mode) async {
-    // ignore: unnecessary_null_comparison
-    if (controller == null) {
-      return;
-    }
-
+  Future<void> setFlashMode(FlashMode mode) async {
     try {
-      await controller.setFocusMode(mode);
-    } on CameraException catch (e) {
-      // ignore: avoid_print
-      print(e);
+      await widget.controller!.setFlashMode(mode);
+    } on CameraException {
       rethrow;
     }
   }
 
-  Future<void> _startVideoPlayer() async {
-    if (videoFile != null) {
-      videoController = VideoPlayerController.file(File(videoFile!.path));
-      await videoController!.initialize().then((_) {
-        // Ensure the first frame is shown after the video is initialized,
-        // even before the play button has been pressed.
+  void onSetFlashModeButtonPressed(FlashMode mode) {
+    setFlashMode(mode).then((_) {
+      if (mounted) {
         setState(() {});
-      });
-      await videoController!.setLooping(true);
-      await videoController!.play();
-    }
+      }
+    });
   }
+}
 
-  Future<XFile?> takePicture() async {
-    final CameraController? cameraController = controller;
-    if (cameraController!.value.isTakingPicture) {
-      return null;
-    }
-    try {
-      XFile file = await cameraController.takePicture();
-      videoController?.dispose();
-      videoController = null;
-      return file;
-    } on CameraException catch (e) {
-      // ignore: avoid_print
-      print('Error occured while taking picture: $e');
-      return null;
-    }
-  }
+class BuildTime extends StatelessWidget {
+  const BuildTime({
+    Key? key,
+    required this.duration,
+  }) : super(key: key);
 
-  Future<void> startVideoRecording() async {
-    final CameraController? cameraController = controller;
-    if (controller.value.isRecordingVideo) {
-      return;
-    }
-    try {
-      await cameraController!.startVideoRecording();
-      setState(() {
-        _isRecordingInProgress = true;
-        imageFile = null;
-        // ignore: avoid_print
-        print(_isRecordingInProgress);
-      });
-    } on CameraException catch (e) {
-      // ignore: avoid_print
-      print('Error starting to record video: $e');
-    }
-  }
+  final Duration duration;
 
-  Future<XFile?> stopVideoRecording() async {
-    if (!controller.value.isRecordingVideo) {
-      return null;
-    }
-    try {
-      XFile file = await controller.stopVideoRecording();
-      setState(() {
-        _isRecordingInProgress = false;
-        // ignore: avoid_print
-        print(_isRecordingInProgress);
-      });
-      return file;
-    } on CameraException catch (e) {
-      // ignore: avoid_print
-      print('Error stopping video recording: $e');
-      return null;
-    }
-  }
-
-  Future<void> pauseVideoRecording() async {
-    if (!controller.value.isRecordingVideo) {
-      // Video recording is not in progress
-      return;
-    }
-    try {
-      await controller.pauseVideoRecording();
-    } on CameraException catch (e) {
-      debugPrint('Error pausing video recording: $e');
-    }
-  }
-
-  Future<void> resumeVideoRecording() async {
-    if (!controller.value.isRecordingVideo) {
-      // No video recording was in progress
-      return;
-    }
-    try {
-      await controller.resumeVideoRecording();
-    } on CameraException catch (e) {
-      // ignore: avoid_print
-      print('Error resuming video recording: $e');
-    }
+  @override
+  Widget build(BuildContext context) {
+    // ignore: non_constant_identifier_names
+    String TwoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = TwoDigits(duration.inHours.remainder(60));
+    final minutes = TwoDigits(duration.inMinutes.remainder(60));
+    final seconds = TwoDigits(duration.inSeconds.remainder(60));
+    return Text(
+      '$hours:$minutes:$seconds',
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          decoration: TextDecoration.none),
+    );
   }
 }

@@ -10,6 +10,7 @@ abstract class Routes {
   static const profile = _Paths.profile;
   static const media = _Paths.media;
   static const camerascreen = _Paths.camerascreen;
+  static const test = _Paths.test;
 }
 
 abstract class _Paths {
@@ -21,4 +22,5 @@ abstract class _Paths {
   static const profile = '/profile';
   static const media = '/media';
   static const camerascreen = '/camera-screen';
+  static const test = '/test';
 }
