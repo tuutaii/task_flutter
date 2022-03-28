@@ -9,21 +9,22 @@ class DisplayPictureScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: imagePath == null ? Colors.white : Colors.black,
-      appBar: AppBar(title: const Text('Display the Picture')),
-      body: Hero(
-          tag: 'galley',
-          child: imagePath == null
-              ? const Center(
-                  child: Text(
-                    'Empty',
-                    style: TextStyle(
-                      decoration: TextDecoration.none,
-                    ),
+    return Hero(
+      tag: 'galley',
+      child: Scaffold(
+        backgroundColor: imagePath == null ? Colors.white : Colors.black,
+        appBar: AppBar(title: const Text('Display the Picture')),
+        body: imagePath == null
+            ? const Center(
+                child: Text(
+                  'Empty',
+                  style: TextStyle(
+                    decoration: TextDecoration.none,
                   ),
-                )
-              : Image.file(File(imagePath!))),
+                ),
+              )
+            : Image.file(File(imagePath!)),
+      ),
     );
   }
 }

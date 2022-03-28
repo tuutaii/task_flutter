@@ -74,13 +74,17 @@ class _CameraScreenViewState extends State<CameraScreenView>
     super.initState();
     initCamera(0);
     tabController = TabController(length: 2, vsync: this);
+    tabController.addListener(() {
+      setState(() {
+        _isVideoCameraSelected = tabController.index == 1;
+      });
+    });
   }
 
   @override
   void dispose() {
     controller?.dispose();
     videoController?.dispose();
-    tabController.dispose();
     super.dispose();
   }
 
@@ -146,7 +150,10 @@ class _CameraScreenViewState extends State<CameraScreenView>
                   padding: const EdgeInsets.all(10),
                   child: Column(
                     children: [
-                      switchCamera(),
+                      CameraMode(
+                        tabController: tabController,
+                        isVideoCameraSelected: _isVideoCameraSelected,
+                      ),
                       Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
@@ -208,7 +215,7 @@ class _CameraScreenViewState extends State<CameraScreenView>
                                           color: Colors.white,
                                           size: 32,
                                         )
-                                      : Container(),
+                                      : const SizedBox(),
                                 ],
                               ),
                             ),
@@ -225,50 +232,6 @@ class _CameraScreenViewState extends State<CameraScreenView>
         ],
       ),
     );
-  }
-
-  Widget switchCamera() {
-    return SizedBox(
-      height: 50,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TabBar(
-            indicator: BoxDecoration(
-                border: Border.all(color: Colors.white),
-                borderRadius: BorderRadius.circular(50),
-                color: Colors.transparent),
-            isScrollable: true,
-            unselectedLabelColor: Colors.grey,
-            labelColor: Colors.white,
-            labelStyle:
-                const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            tabs: const [
-              Tab(
-                child: Text('Camera'),
-              ),
-              Tab(
-                child: Text('Video'),
-              ),
-            ],
-            controller: tabController,
-            indicatorColor: Colors.white,
-            onTap: (index) {
-              index == 0
-                  ? _isVideoCameraSelected = false
-                  : _isVideoCameraSelected = true;
-              changeColorButton();
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  void changeColorButton() {
-    tabController.addListener(() {
-      setState(() {});
-    });
   }
 
   void addTime() {
@@ -296,16 +259,22 @@ class _CameraScreenViewState extends State<CameraScreenView>
     controller?.setZoomLevel(_curentZoom.value);
   }
 
-  Future<void> startVideoPlayer() async {
-    if (videoFile != null) {
-      videoController = VideoPlayerController.file(File(videoFile!.path));
-      await videoController!.initialize().then((_) {
-        // Ensure the first frame is shown after the video is initialized,
-        // even before the play button has been pressed.
-        setState(() {});
+  Future<XFile?> stopVideoRecording() async {
+    if (!controller!.value.isRecordingVideo) {
+      return null;
+    }
+    try {
+      XFile file = await controller!.stopVideoRecording();
+      setState(() {
+        _isRecordingInProgress = false;
+        // ignore: avoid_print
+        print(_isRecordingInProgress);
       });
-      await videoController!.setLooping(true);
-      await videoController!.play();
+      return file;
+    } on CameraException catch (e) {
+      // ignore: avoid_print
+      print('Error stopping video recording: $e');
+      return null;
     }
   }
 
@@ -322,6 +291,19 @@ class _CameraScreenViewState extends State<CameraScreenView>
       // ignore: avoid_print
       print('Error occured while taking picture: $e');
       return null;
+    }
+  }
+
+  Future<void> startVideoPlayer() async {
+    if (videoFile != null) {
+      videoController = VideoPlayerController.file(File(videoFile!.path));
+      await videoController!.initialize().then((_) {
+        // Ensure the first frame is shown after the video is initialized,
+        // even before the play button has been pressed.
+        setState(() {});
+      });
+      await videoController!.setLooping(true);
+      await videoController!.play();
     }
   }
 
@@ -343,28 +325,8 @@ class _CameraScreenViewState extends State<CameraScreenView>
     }
   }
 
-  Future<XFile?> stopVideoRecording() async {
-    if (!controller!.value.isRecordingVideo) {
-      return null;
-    }
-    try {
-      XFile file = await controller!.stopVideoRecording();
-      setState(() {
-        _isRecordingInProgress = false;
-        // ignore: avoid_print
-        print(_isRecordingInProgress);
-      });
-      return file;
-    } on CameraException catch (e) {
-      // ignore: avoid_print
-      print('Error stopping video recording: $e');
-      return null;
-    }
-  }
-
   Future<void> pauseVideoRecording() async {
     if (!controller!.value.isRecordingVideo) {
-      // Video recording is not in progress
       return;
     }
     try {
@@ -376,7 +338,6 @@ class _CameraScreenViewState extends State<CameraScreenView>
 
   Future<void> resumeVideoRecording() async {
     if (!controller!.value.isRecordingVideo) {
-      // No video recording was in progress
       return;
     }
     try {
@@ -385,6 +346,105 @@ class _CameraScreenViewState extends State<CameraScreenView>
       // ignore: avoid_print
       print('Error resuming video recording: $e');
     }
+  }
+}
+
+class CameraMode extends StatefulWidget {
+  const CameraMode({
+    Key? key,
+    required this.tabController,
+    required this.isVideoCameraSelected,
+  }) : super(key: key);
+
+  final TabController tabController;
+  final bool isVideoCameraSelected;
+
+  @override
+  State<CameraMode> createState() => _CameraModeState();
+}
+
+class _CameraModeState extends State<CameraMode> {
+  late bool isVideoCameraSelected;
+  @override
+  void initState() {
+    isVideoCameraSelected = widget.isVideoCameraSelected;
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant CameraMode oldWidget) {
+    if (oldWidget.isVideoCameraSelected != widget.isVideoCameraSelected) {
+      setState(() {
+        isVideoCameraSelected = widget.isVideoCameraSelected;
+      });
+    }
+
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TabBar(
+            indicator: BoxDecoration(
+                border: Border.all(color: Colors.white),
+                borderRadius: BorderRadius.circular(50),
+                color: Colors.transparent),
+            isScrollable: true,
+            unselectedLabelColor: Colors.grey,
+            labelColor: Colors.white,
+            labelStyle:
+                const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            tabs: const [
+              Tab(
+                child: Text('Camera'),
+              ),
+              Tab(
+                child: Text('Video'),
+              ),
+            ],
+            controller: widget.tabController,
+            indicatorColor: Colors.white,
+            onTap: (index) {
+              index == 0
+                  ? isVideoCameraSelected = false
+                  : isVideoCameraSelected = true;
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BuildTime extends StatelessWidget {
+  const BuildTime({
+    Key? key,
+    required this.duration,
+  }) : super(key: key);
+
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    // ignore: non_constant_identifier_names
+    String TwoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = TwoDigits(duration.inHours.remainder(60));
+    final minutes = TwoDigits(duration.inMinutes.remainder(60));
+    final seconds = TwoDigits(duration.inSeconds.remainder(60));
+    return Text(
+      '$hours:$minutes:$seconds',
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          decoration: TextDecoration.none),
+    );
   }
 }
 
@@ -449,7 +509,7 @@ class Thumbnail extends StatelessWidget {
                   radius: 30,
                   child: ClipOval(child: VideoPlayer(videoController!)),
                 )
-              : Container(),
+              : const SizedBox(),
         ),
       ),
     );
@@ -609,32 +669,5 @@ class _FlashModeCameraState extends State<FlashModeCamera> {
         setState(() {});
       }
     });
-  }
-}
-
-class BuildTime extends StatelessWidget {
-  const BuildTime({
-    Key? key,
-    required this.duration,
-  }) : super(key: key);
-
-  final Duration duration;
-
-  @override
-  Widget build(BuildContext context) {
-    // ignore: non_constant_identifier_names
-    String TwoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = TwoDigits(duration.inHours.remainder(60));
-    final minutes = TwoDigits(duration.inMinutes.remainder(60));
-    final seconds = TwoDigits(duration.inSeconds.remainder(60));
-    return Text(
-      '$hours:$minutes:$seconds',
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          decoration: TextDecoration.none),
-    );
   }
 }
