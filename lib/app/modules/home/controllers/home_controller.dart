@@ -1,10 +1,8 @@
-import 'package:camera/camera.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
   var selectedIndex = 0;
   var title = 'Input Formatter';
-  late CameraController cameraController;
 
   void changeTabIndex(int index) {
     selectedIndex = index;
@@ -21,10 +19,15 @@ class HomeController extends GetxController {
         break;
       case 2:
         {
-          title = 'Camera picker';
+          title = 'Media Picker';
         }
         break;
       case 3:
+        {
+          title = 'Camera picker';
+        }
+        break;
+      case 4:
         {
           title = 'Profile API';
         }

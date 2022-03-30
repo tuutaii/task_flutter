@@ -1,10 +1,11 @@
-import 'package:basesource/app/modules/camera_screen/views/camera_screen_view.dart';
+import 'package:basesource/app/modules/camera_screen/package/camera_picker.dart';
 import 'package:basesource/app/modules/profile/views/profile_view.dart';
 import 'package:basesource/app/modules/tab_web/views/tab_web_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../input_formatter/views/inputformatter_view.dart';
+import '../../media/views/media_view.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends StatelessWidget {
@@ -33,8 +34,22 @@ class HomeView extends StatelessWidget {
               children: [
                 InputFormatterView(),
                 const TabWebView(),
-                // const MediaView(),
-                const CameraScreenView(),
+                const MediaView(),
+                Center(
+                  child: TextButton(
+                    child: const Text(
+                      'Camera Picker Custom',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () {
+                      CameraPickerCustom.cameraPicker(context);
+                    },
+                  ),
+                ),
                 const ProfileView(),
               ],
             ),
@@ -56,7 +71,7 @@ class HomeView extends StatelessWidget {
               items: [
                 buildBottomNavigationMenu(
                   const Icon(CupertinoIcons.textformat_alt),
-                  'Input Formatter',
+                  'Formatter',
                 ),
                 buildBottomNavigationMenu(
                   const Icon(
@@ -64,11 +79,11 @@ class HomeView extends StatelessWidget {
                   ),
                   'Web View',
                 ),
-                // buildBottomNavigationMenu(
-                //     const Icon(
-                //       Icons.photo_camera_outlined,
-                //     ),
-                //     'Media '),
+                buildBottomNavigationMenu(
+                    const Icon(
+                      Icons.photo_library_outlined,
+                    ),
+                    'Media '),
                 buildBottomNavigationMenu(
                     const Icon(
                       CupertinoIcons.camera,

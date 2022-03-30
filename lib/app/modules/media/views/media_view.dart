@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:velocity_x/velocity_x.dart';
+
+import '../packages/media_picker.dart';
 
 class MediaView extends StatefulWidget {
   const MediaView({
@@ -14,100 +12,52 @@ class MediaView extends StatefulWidget {
 }
 
 class MediaViewState extends State<MediaView> {
-  File? _image;
-  Future getImage() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    setState(() {
-      _image = File(image!.path);
-    });
+  List<dynamic>? mediaPaths;
+
+  void _getImages() async {
+    mediaPaths = await MediaPicker.pickImages(
+      quantity: 7,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      quality: 85,
+    );
+
+    if (!mounted) return;
+    setState(() {});
   }
 
-  Future getImageCam() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.camera);
-    setState(() {
-      _image = File(image!.path);
-    });
+  void _getVideos() async {
+    mediaPaths = await MediaPicker.pickVideos(quantity: 7);
+
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body: SafeArea(
-            child: SingleChildScrollView(
-      child: Column(
-        children: [
-          _image == null
-              ? (Image.network(
-                  'https://i.pinimg.com/564x/e6/57/55/e65755e73d8085e30aedfa21fde07f1b.jpg'))
-              : Image.file(_image!),
-          Center(
-              child: ElevatedButton.icon(
-                  onPressed: () {
-                    Get.bottomSheet(
-                      SingleChildScrollView(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(10.0),
-                            topRight: Radius.circular(10.0),
-                          ),
-                          child: Container(
-                            color: Colors.white,
-                            height: 250,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const Text(
-                                    "Pic Image From",
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(
-                                    height: 10,
-                                  ),
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      getImageCam();
-                                    },
-                                    icon: const Icon(Icons.camera),
-                                    label: const Text("CAMERA"),
-                                  ),
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      getImage();
-                                    },
-                                    icon: const Icon(Icons.image),
-                                    label: const Text("GALLERY"),
-                                  ),
-                                  const SizedBox(
-                                    height: 10,
-                                  ),
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      Get.back();
-                                    },
-                                    style: ButtonStyle(
-                                      backgroundColor:
-                                          MaterialStateProperty.all(Colors.red),
-                                    ),
-                                    icon: const Icon(Icons.close),
-                                    label: const Text("CANCEL"),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.upload),
-                  label: 'Upload'.text.make()))
-        ],
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Plugin example app'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              TextButton(
+                child: const Text('Get images'),
+                onPressed: _getImages,
+              ),
+              TextButton(
+                child: const Text('Get videos'),
+                onPressed: _getVideos,
+              ),
+              if (mediaPaths != null) Text(mediaPaths!.join('\n'))
+            ],
+          ),
+        ),
       ),
-    )));
+    );
   }
 }

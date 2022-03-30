@@ -13,7 +13,20 @@ class DisplayPictureScreen extends StatelessWidget {
       tag: 'galley',
       child: Scaffold(
         backgroundColor: imagePath == null ? Colors.white : Colors.black,
-        appBar: AppBar(title: const Text('Display the Picture')),
+        appBar: AppBar(
+          backgroundColor: Colors.black87,
+          title: const Text(
+            'Display the Picture',
+            style: TextStyle(),
+          ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.save_alt),
+            )
+          ],
+        ),
         body: imagePath == null
             ? const Center(
                 child: Text(
