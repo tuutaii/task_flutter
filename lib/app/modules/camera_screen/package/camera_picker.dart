@@ -32,7 +32,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
   CameraController? controller;
   TabController? tabController;
   late TabBar tabbar;
-  double _minAvailableZoom = 1.0, _maxAvailableZoom = 5.0, baseZoomLevel = 1.0;
+  double _minAvailableZoom = 1.0, _maxAvailableZoom = 1.0, baseZoomLevel = 1.0;
   double _minAvailableExposureOffset = -4.0, _maxAvailableExposureOffset = 4.0;
   final _currentExposureOffset = ValueNotifier(0.0);
   var tabIndex = 0;
@@ -75,10 +75,12 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
     );
   }
 
-  void addTime() {
-    const addSeconds = 1;
-    final seconds = duration.value.inSeconds + addSeconds;
-    duration.value = Duration(seconds: seconds);
+  void addSeconds() {
+    duration.value = Duration(seconds: duration.value.inSeconds + 1);
+  }
+
+  void startTimer() {
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => addSeconds());
   }
 
   void cancelTimer() {
@@ -91,8 +93,9 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
     timer?.cancel();
   }
 
-  void startTimer() {
-    timer = Timer.periodic(const Duration(seconds: 1), (_) => addTime());
+  void resumeTimer() {
+    _isRecordingPaused.value = false;
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => addSeconds());
   }
 
   void handleScale(detail) {
@@ -137,6 +140,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
   Future<void> pauseVideoRecording() async {
     if (controller!.value.isRecordingVideo) {
       try {
+        _isRecordingPaused.value = true;
         await controller!.pauseVideoRecording();
       } on CameraException catch (e) {
         log('Error pausing video recording: $e');
@@ -147,6 +151,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
   Future<void> resumeVideoRecording() async {
     if (controller!.value.isRecordingVideo) {
       try {
+        _isRecordingPaused.value = false;
         await controller!.resumeVideoRecording();
       } on CameraException catch (e) {
         log('Error resuming video recording: $e');
@@ -187,7 +192,6 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
               child: Stack(
                 children: [
                   GestureDetector(
-                    behavior: HitTestBehavior.opaque,
                     onScaleUpdate: handleScale,
                     child: SizedBox(
                       width: double.infinity,
@@ -227,92 +231,104 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
                     tabController: tabController!,
                     isVideoCameraSelected: _isVideoCameraSelected,
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ValueListenableBuilder(
-                        valueListenable: _isRecordingInProgress,
-                        builder: (_, bool isRecord, Widget? buildTime) {
-                          return isRecord
-                              ? IconButtonCustom(
-                                  iconData: _isRecordingPaused.value
-                                      ? Icons.play_arrow
-                                      : Icons.pause_circle_rounded,
-                                  ontap: () {
-                                    if (_isRecordingPaused.value) {
-                                      pauseVideoRecording();
-                                      pauseTimer();
-                                    }
-                                  },
-                                )
-                              : IconButtonCustom(
-                                  iconData: CupertinoIcons.switch_camera_solid,
-                                  ontap: () {
-                                    if (cameraId.value == 0) {
-                                      initCamera(1);
-                                    } else {
-                                      initCamera(0);
-                                    }
-                                  },
-                                );
-                        },
-                      ),
-                      InkWell(
-                        onTap: () {
-                          if (_isVideoCameraSelected) {
-                            if (_isRecordingInProgress.value) {
-                              stopVideoRecording();
-                              cancelTimer();
-                            } else {
-                              startVideoRecording();
-                              startTimer();
-                            }
-                          } else {
-                            takePicture();
-                          }
-                        },
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: _isVideoCameraSelected
-                              ? ValueListenableBuilder(
-                                  valueListenable: _isRecordingInProgress,
-                                  builder: (_, bool isRecord, __) {
-                                    return isRecord
-                                        ? const ButtonCustom(
-                                            icon: Icon(
-                                              Icons.stop_rounded,
-                                              color: Colors.black,
-                                              size: 30,
-                                            ),
-                                          )
-                                        : const ButtonCustom(
-                                            icon: Icon(
-                                              Icons.circle_rounded,
-                                              color: Colors.red,
-                                              size: 20,
-                                            ),
-                                          );
-                                  },
-                                )
-                              : const ButtonCustom(),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        ValueListenableBuilder(
+                          valueListenable: _isRecordingInProgress,
+                          builder: (_, bool isRecord, __) {
+                            return isRecord
+                                ? ValueListenableBuilder(
+                                    valueListenable: _isRecordingPaused,
+                                    builder: (_, bool isPause, __) {
+                                      return IconButtonCustom(
+                                        iconData: isPause
+                                            ? Icons.play_circle_fill_rounded
+                                            : Icons.pause_circle_rounded,
+                                        ontap: () {
+                                          if (isPause) {
+                                            resumeVideoRecording();
+                                            resumeTimer();
+                                          } else {
+                                            pauseVideoRecording();
+                                            pauseTimer();
+                                          }
+                                        },
+                                      );
+                                    },
+                                  )
+                                : IconButtonCustom(
+                                    iconData:
+                                        CupertinoIcons.switch_camera_solid,
+                                    ontap: () {
+                                      if (cameraId.value == 0) {
+                                        initCamera(1);
+                                      } else {
+                                        initCamera(0);
+                                      }
+                                    },
+                                  );
+                          },
                         ),
-                      ),
-                      ValueListenableBuilder(
-                        valueListenable: file,
-                        builder: (_, XFile? file, __) {
-                          if (file == null) {
-                            return const CircleAvatar(
-                              minRadius: 25,
-                              backgroundColor: Colors.white,
-                            );
-                          } else {
-                            return Thumbnail(
-                              file: file,
-                            );
-                          }
-                        },
-                      ),
-                    ],
+                        InkWell(
+                          onTap: () {
+                            if (_isVideoCameraSelected) {
+                              if (_isRecordingInProgress.value) {
+                                stopVideoRecording();
+                                cancelTimer();
+                              } else {
+                                startVideoRecording();
+                                startTimer();
+                              }
+                            } else {
+                              takePicture();
+                            }
+                          },
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: _isVideoCameraSelected
+                                ? ValueListenableBuilder(
+                                    valueListenable: _isRecordingInProgress,
+                                    builder: (_, bool isRecord, __) {
+                                      return isRecord
+                                          ? const ButtonCustom(
+                                              icon: Icon(
+                                                Icons.stop_rounded,
+                                                color: Colors.black,
+                                                size: 30,
+                                              ),
+                                            )
+                                          : const ButtonCustom(
+                                              icon: Icon(
+                                                Icons.circle_rounded,
+                                                color: Colors.red,
+                                                size: 20,
+                                              ),
+                                            );
+                                    },
+                                  )
+                                : const ButtonCustom(),
+                          ),
+                        ),
+                        ValueListenableBuilder(
+                          valueListenable: file,
+                          builder: (_, XFile? file, __) {
+                            if (file == null) {
+                              return const CircleAvatar(
+                                minRadius: 25,
+                                backgroundColor: Colors.white,
+                              );
+                            } else {
+                              return Thumbnail(
+                                file: file,
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
