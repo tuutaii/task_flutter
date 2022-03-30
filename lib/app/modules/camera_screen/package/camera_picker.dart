@@ -224,7 +224,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10.0),
               child: Column(
                 children: [
                   CameraMode(
@@ -239,37 +239,38 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
                         ValueListenableBuilder(
                           valueListenable: _isRecordingInProgress,
                           builder: (_, bool isRecord, __) {
-                            return isRecord
-                                ? ValueListenableBuilder(
-                                    valueListenable: _isRecordingPaused,
-                                    builder: (_, bool isPause, __) {
-                                      return IconButtonCustom(
-                                        iconData: isPause
-                                            ? Icons.play_circle_fill_rounded
-                                            : Icons.pause_circle_rounded,
-                                        ontap: () {
-                                          if (isPause) {
-                                            resumeVideoRecording();
-                                            resumeTimer();
-                                          } else {
-                                            pauseVideoRecording();
-                                            pauseTimer();
-                                          }
-                                        },
-                                      );
-                                    },
-                                  )
-                                : IconButtonCustom(
-                                    iconData:
-                                        CupertinoIcons.switch_camera_solid,
+                            if (isRecord) {
+                              return ValueListenableBuilder(
+                                valueListenable: _isRecordingPaused,
+                                builder: (_, bool isPause, __) {
+                                  return IconButtonCustom(
+                                    iconData: isPause
+                                        ? Icons.play_circle_fill_rounded
+                                        : Icons.pause_circle_rounded,
                                     ontap: () {
-                                      if (cameraId.value == 0) {
-                                        initCamera(1);
+                                      if (isPause) {
+                                        resumeVideoRecording();
+                                        resumeTimer();
                                       } else {
-                                        initCamera(0);
+                                        pauseVideoRecording();
+                                        pauseTimer();
                                       }
                                     },
                                   );
+                                },
+                              );
+                            } else {
+                              return IconButtonCustom(
+                                iconData: CupertinoIcons.switch_camera_solid,
+                                ontap: () {
+                                  if (cameraId.value == 0) {
+                                    initCamera(1);
+                                  } else {
+                                    initCamera(0);
+                                  }
+                                },
+                              );
+                            }
                           },
                         ),
                         InkWell(
@@ -292,21 +293,23 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
                                 ? ValueListenableBuilder(
                                     valueListenable: _isRecordingInProgress,
                                     builder: (_, bool isRecord, __) {
-                                      return isRecord
-                                          ? const ButtonCustom(
-                                              icon: Icon(
-                                                Icons.stop_rounded,
-                                                color: Colors.black,
-                                                size: 30,
-                                              ),
-                                            )
-                                          : const ButtonCustom(
-                                              icon: Icon(
-                                                Icons.circle_rounded,
-                                                color: Colors.red,
-                                                size: 20,
-                                              ),
-                                            );
+                                      if (isRecord) {
+                                        return const ButtonCustom(
+                                          icon: Icon(
+                                            Icons.stop_rounded,
+                                            color: Colors.black,
+                                            size: 30,
+                                          ),
+                                        );
+                                      } else {
+                                        return const ButtonCustom(
+                                          icon: Icon(
+                                            Icons.circle_rounded,
+                                            color: Colors.red,
+                                            size: 20,
+                                          ),
+                                        );
+                                      }
                                     },
                                   )
                                 : const ButtonCustom(),

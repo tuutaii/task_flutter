@@ -27,16 +27,7 @@ class DisplayPictureScreen extends StatelessWidget {
             )
           ],
         ),
-        body: imagePath == null
-            ? const Center(
-                child: Text(
-                  'Empty',
-                  style: TextStyle(
-                    decoration: TextDecoration.none,
-                  ),
-                ),
-              )
-            : Image.file(File(imagePath!)),
+        body: Image.file(File(imagePath!)),
       ),
     );
   }

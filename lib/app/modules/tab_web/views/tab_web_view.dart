@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -16,88 +17,76 @@ class TabWebView extends StatelessWidget {
             height: MediaQuery.of(context).size.height,
             width: MediaQuery.of(context).size.width,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      Flexible(
-                          flex: 4,
-                          child: FutureBuilder(builder: (context, snapshot) {
-                            return TextFormField(
-                              autocorrect: false,
-                              style: const TextStyle(
-                                  color: Colors.black, fontSize: 20),
-                              decoration: InputDecoration(
-                                  focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                          color: Colors.black)),
-                                  enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide:
-                                          const BorderSide(color: Colors.grey)),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  suffixIcon: IconButton(
-                                      icon: const Icon(
-                                        Icons.search,
-                                        color: Colors.grey,
-                                      ),
-                                      onPressed: () {
-                                        String finalURL =
-                                            controller.urlCtr.text;
-                                        if (!finalURL.startsWith("https://")) {
-                                          finalURL = "https://" + finalURL;
-                                        }
-                                        // ignore: unnecessary_null_comparison
-                                        if (controller != null) {
-                                          controller.loading();
-
-                                          controller.webViewController
-                                              .loadUrl(finalURL)
-                                              .then((onValue) {})
-                                              .catchError((e) {
-                                            controller.loading();
-                                          });
-                                        }
-                                      }),
-                                  hintText: 'Enter url here...',
-                                  hintStyle: const TextStyle(
-                                      fontSize: 14,
+              children: [
+                FutureBuilder(builder: (context, snapshot) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 15),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(.2),
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 15),
+                        child: TextFormField(
+                          textAlign: TextAlign.left,
+                          maxLines: 1,
+                          cursorHeight: 30,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 15,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            suffixIcon: (controller.showLoading)
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(
+                                      Icons.search,
                                       color: Colors.grey,
-                                      fontStyle: FontStyle.italic)),
-                              controller: controller.urlCtr,
-                            );
-                          }))
-                    ],
+                                    ),
+                                    onPressed: () {
+                                      String finalURL = controller.urlCtr.text;
+                                      if (!finalURL.startsWith("https://")) {
+                                        finalURL = "https://" + finalURL;
+                                      }
+                                      controller.loading();
+
+                                      controller.webViewController
+                                          .loadUrl(finalURL)
+                                          .then((onValue) {})
+                                          .catchError((e) {
+                                        controller.loading();
+                                      });
+                                    }),
+                            hintText: 'Enter url here...',
+                            hintStyle: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          controller: controller.urlCtr,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                Expanded(
+                  child: WebView(
+                    initialUrl: 'https://www.google.com',
+                    onPageFinished: (data) {
+                      controller.loading;
+                    },
+                    javascriptMode: JavascriptMode.unrestricted,
+                    onWebViewCreated: (webViewController) {
+                      controller.webViewController = webViewController;
+                    },
                   ),
                 ),
-                Flexible(
-                    flex: 6,
-                    child: Stack(
-                      children: <Widget>[
-                        WebView(
-                          initialUrl: 'https://www.google.com',
-                          onPageFinished: (data) {
-                            controller.loading;
-                          },
-                          javascriptMode: JavascriptMode.unrestricted,
-                          onWebViewCreated: (webViewController) {
-                            controller.webViewController = webViewController;
-                          },
-                        ),
-                        (controller.showLoading)
-                            ? const Center(
-                                child: CircularProgressIndicator(),
-                              )
-                            : const Center()
-                      ],
-                    )),
               ],
             ),
           ),
