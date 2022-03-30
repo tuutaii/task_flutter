@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../modules/camera_screen/bindings/camera_screen_binding.dart';
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
-import '../modules/input_formatter/bindings/inputformatter_binding.dart';
+import '../modules/input_formatter/bindings/input_formatter_binding.dart';
 import '../modules/media/bindings/media_binding.dart';
 import '../modules/profile/bindings/profile_binding.dart';
 import '../modules/tab_web/bindings/tab_web_binding.dart';

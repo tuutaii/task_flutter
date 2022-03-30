@@ -5,11 +5,11 @@ abstract class Routes {
   Routes._();
   static const home = _Paths.home;
   static const homepage = _Paths.homepage;
-  static const webview = _Paths.webview;
-  static const tabweb = _Paths.tabweb;
+  static const webView = _Paths.webView;
+  static const tabWeb = _Paths.tabWeb;
   static const profile = _Paths.profile;
   static const media = _Paths.media;
-  static const camerascreen = _Paths.camerascreen;
+  static const cameraScreen = _Paths.cameraScreen;
   static const test = _Paths.test;
 }
 
@@ -17,10 +17,10 @@ abstract class _Paths {
   _Paths._();
   static const home = '/home';
   static const homepage = '/homepage';
-  static const webview = '/web-view';
-  static const tabweb = '/tab-web';
+  static const webView = '/web-view';
+  static const tabWeb = '/tab-web';
   static const profile = '/profile';
   static const media = '/media';
-  static const camerascreen = '/camera-screen';
+  static const cameraScreen = '/camera-screen';
   static const test = '/test';
 }

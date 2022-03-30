@@ -4,7 +4,7 @@ import 'package:basesource/app/modules/tab_web/views/tab_web_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../input_formatter/views/inputformatter_view.dart';
+import '../../input_formatter/views/input_formatter_view.dart';
 import '../../media/views/media_view.dart';
 import '../controllers/home_controller.dart';
 
@@ -108,13 +108,13 @@ TextStyle selectedLabelStyle = const TextStyle(
 
 buildBottomNavigationMenu(
   Icon icon,
-  String lable,
+  String label,
 ) {
   return BottomNavigationBarItem(
       icon: Container(
         margin: const EdgeInsets.only(bottom: 7),
         child: icon,
       ),
-      label: lable,
+      label: label,
       backgroundColor: Colors.blue);
 }

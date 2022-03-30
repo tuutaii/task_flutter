@@ -4,8 +4,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../widgets/display_image.dart';
-import '../../widgets/display_video.dart';
+import '../../views/display_image.dart';
+import '../../views/display_video.dart';
 
 class Thumbnail extends StatefulWidget {
   const Thumbnail({
