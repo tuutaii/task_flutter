@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../packages/media_picker.dart';
+import '../packages/media_picker_widget.dart';
 
 class MediaView extends StatefulWidget {
   const MediaView({
@@ -12,52 +12,66 @@ class MediaView extends StatefulWidget {
 }
 
 class MediaViewState extends State<MediaView> {
-  List<dynamic>? mediaPaths;
+  List<Media> mediaList = [];
 
-  void _getImages() async {
-    mediaPaths = await MediaPicker.pickImages(
-      quantity: 7,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      quality: 85,
-    );
-
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  void _getVideos() async {
-    mediaPaths = await MediaPicker.pickVideos(quantity: 7);
-
-    if (!mounted) return;
-    setState(() {});
+  @override
+  void initState() {
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              TextButton(
-                child: const Text('Get images'),
-                onPressed: _getImages,
-              ),
-              TextButton(
-                child: const Text('Get videos'),
-                onPressed: _getVideos,
-              ),
-              if (mediaPaths != null) Text(mediaPaths!.join('\n'))
-            ],
-          ),
-        ),
+    return Scaffold(
+      body: previewList(),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => openImagePicker(context),
       ),
     );
+  }
+
+  Widget previewList() {
+    return SizedBox(
+      height: 96,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        shrinkWrap: true,
+        children: List.generate(
+            mediaList.length,
+            (index) => Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    height: 80,
+                    width: 80,
+                    child: Image.memory(
+                      mediaList[index].thumbnail!,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )),
+      ),
+    );
+  }
+
+  void openImagePicker(BuildContext context) {
+    showModalBottomSheet(
+        context: context,
+        builder: (context) {
+          return MediaPicker(
+            mediaList: mediaList,
+            onPick: (selectedList) {
+              setState(() => mediaList = selectedList);
+              Navigator.pop(context);
+            },
+            onCancel: () => Navigator.pop(context),
+            mediaCount: MediaCount.multiple,
+            mediaType: MediaType.image,
+            decoration: PickerDecoration(
+              actionBarPosition: ActionBarPosition.top,
+              blurStrength: 2,
+              completeText: 'Next',
+            ),
+          );
+        });
   }
 }

@@ -1,110 +1,166 @@
-import 'dart:async';
-import 'dart:io';
-import 'package:flutter/services.dart';
+part of media_picker_widget;
 
-class MediaPicker {
-  static const MethodChannel _channel = MethodChannel('medias_picker');
+///The MediaPicker widget that will select media files form storage
+class MediaPicker extends StatefulWidget {
+  ///The MediaPicker constructor that will select media files form storage
+  const MediaPicker({
+    Key? key,
+    required this.onPick,
+    required this.mediaList,
+    required this.onCancel,
+    this.mediaCount = MediaCount.multiple,
+    this.mediaType = MediaType.all,
+    this.decoration,
+    this.scrollController,
+  }) : super(key: key);
 
-  static Future<List<dynamic>> pickImages(
-      {required int quantity,
-      int? maxWidth,
-      int? maxHeight,
-      int? quality}) async {
-    if (maxWidth != null && maxWidth < 0) {
-      throw ArgumentError.value(maxWidth, 'maxWidth cannot be negative');
-    }
+  ///CallBack on image pick is done
+  final ValueChanged<List<Media>> onPick;
 
-    if (maxHeight != null && maxHeight < 0) {
-      throw ArgumentError.value(maxHeight, 'maxHeight cannot be negative');
-    }
+  ///Previously selected list of media in your app
+  final List<Media> mediaList;
 
-    if (quality != null && (quality < 0 || quality > 100)) {
-      throw ArgumentError.value(
-          maxWidth, 'quality cannot be negative and cannot be bigger then 100');
-    }
+  ///Callback on cancel the picking action
+  final VoidCallback onCancel;
 
-    if (Platform.isAndroid &&
-        !await checkPermission() &&
-        !await requestPermission()) {
-      return [];
-    }
+  ///make picker to select multiple or single media file
+  final MediaCount mediaCount;
 
-    final List<dynamic> docsPaths =
-        await _channel.invokeMethod('pickImages', <String, dynamic>{
-      'quantity': quantity,
-      'maxWidth': maxWidth ?? 0,
-      'maxHeight': maxHeight ?? 0,
-      'quality': quality ?? 100,
-    });
-    return docsPaths;
+  ///Make picker to select specific type of media, video or image
+  final MediaType mediaType;
+
+  ///decorate the UI of picker
+  final PickerDecoration? decoration;
+
+  ///assign a scroll controller to Media GridView of Picker
+  final ScrollController? scrollController;
+
+  @override
+  _MediaPickerState createState() => _MediaPickerState();
+}
+
+class _MediaPickerState extends State<MediaPicker> {
+  PickerDecoration? _decoration;
+
+  AssetPathEntity? _selectedAlbum;
+  List<AssetPathEntity>? _albums;
+
+  final PanelController _albumController = PanelController();
+  final HeaderController _headerController = HeaderController();
+
+  @override
+  void initState() {
+    _fetchAlbums();
+    _decoration = widget.decoration ?? PickerDecoration();
+    super.initState();
   }
 
-  static Future<List<dynamic>> pickVideos({required int quantity}) async {
-    if (Platform.isAndroid &&
-        !await checkPermission() &&
-        !await requestPermission()) {
-      return [];
-    }
-
-    final List<dynamic> docsPaths =
-        await _channel.invokeMethod('pickVideos', <String, dynamic>{
-      'quantity': quantity,
-    });
-    return docsPaths;
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: _albums == null
+          ? const SizedBox()
+          : _albums!.isEmpty
+              ? const NoMedia()
+              : Column(
+                  children: [
+                    if (_decoration!.actionBarPosition == ActionBarPosition.top)
+                      _buildHeader(),
+                    Expanded(
+                        child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: MediaList(
+                            album: _selectedAlbum!,
+                            headerController: _headerController,
+                            previousList: widget.mediaList,
+                            mediaCount: widget.mediaCount,
+                            decoration: widget.decoration,
+                            scrollController: widget.scrollController,
+                          ),
+                        ),
+                        AlbumSelector(
+                          panelController: _albumController,
+                          albums: _albums!,
+                          decoration: widget.decoration!,
+                          onSelect: (album) {
+                            _headerController.closeAlbumDrawer!();
+                            setState(() => _selectedAlbum = album);
+                          },
+                        ),
+                      ],
+                    )),
+                    if (_decoration!.actionBarPosition ==
+                        ActionBarPosition.bottom)
+                      _buildHeader(),
+                  ],
+                ),
+    );
   }
 
-  static Future<List<dynamic>> compressImages(
-      {required List<String> imgPaths,
-      int? maxWidth,
-      int? maxHeight,
-      int? quality}) async {
-    // ignore: unnecessary_null_comparison
-    if (imgPaths != null && imgPaths.isEmpty) {
-      throw ArgumentError.value(
-          imgPaths, 'imgPaths needs to have 1 or more itens');
-    }
-
-    if (maxWidth != null && maxWidth < 0) {
-      throw ArgumentError.value(maxWidth, 'maxWidth cannot be negative');
-    }
-
-    if (maxHeight != null && maxHeight < 0) {
-      throw ArgumentError.value(maxHeight, 'maxHeight cannot be negative');
-    }
-
-    if (quality != null && (quality < 0 || quality > 100)) {
-      throw ArgumentError.value(
-          quality, 'quality cannot be negative and cannot be bigger then 100');
-    }
-
-    if (Platform.isAndroid &&
-        !await checkPermission() &&
-        !await requestPermission()) {
-      return [];
-    }
-
-    final List<dynamic> docsPaths =
-        await _channel.invokeMethod('compressImages', <String, dynamic>{
-      'imgPaths': imgPaths,
-      'maxWidth': maxWidth ?? 0,
-      'maxHeight': maxHeight ?? 0,
-      'quality': quality ?? 100
-    });
-    return docsPaths;
+  Widget _buildHeader() {
+    return Header(
+      onBack: handleBackPress,
+      onDone: widget.onPick,
+      albumController: _albumController,
+      selectedAlbum: _selectedAlbum!,
+      controller: _headerController,
+      mediaCount: widget.mediaCount,
+      decoration: _decoration,
+    );
   }
 
-  //Just android (storage permission)
-  static Future<bool> checkPermission() async {
-    return await _channel.invokeMethod("checkPermission");
+  _fetchAlbums() async {
+    RequestType type = RequestType.common;
+    if (widget.mediaType == MediaType.all) {
+      type = RequestType.common;
+    } else if (widget.mediaType == MediaType.video) {
+      type = RequestType.video;
+    } else if (widget.mediaType == MediaType.image) {
+      type = RequestType.image;
+    }
+
+    var result = await PhotoManager.requestPermissionExtend();
+    if (result != null) {
+      List<AssetPathEntity> albums =
+          await PhotoManager.getAssetPathList(type: type);
+      setState(() {
+        _albums = albums;
+        _selectedAlbum = _albums![0];
+      });
+    } else {
+      PhotoManager.openSetting();
+    }
   }
 
-  //Just android (storage permission)
-  static Future<bool> requestPermission() async {
-    return await _channel.invokeMethod("requestPermission");
+  void handleBackPress() {
+    if (_albumController.isPanelOpen) {
+      _albumController.close();
+    } else {
+      widget.onCancel();
+    }
   }
+}
 
-  static Future<bool> deleteAllTempFiles() async {
-    final bool deleted = await _channel.invokeMethod('deleteAllTempFiles');
-    return deleted;
+///call this function to capture and get media from camera
+openCamera(
+    {
+
+    ///callback when capturing is done
+    required ValueChanged<Media> onCapture}) async {
+  final ImagePicker _picker = ImagePicker();
+  final XFile? pickedFile = await _picker.pickImage(source: ImageSource.camera);
+
+  if (pickedFile != null) {
+    Media converted = Media(
+      id: UniqueKey().toString(),
+      thumbnail: await pickedFile.readAsBytes(),
+      creationTime: DateTime.now(),
+      mediaByte: await pickedFile.readAsBytes(),
+      title: 'capturedImage',
+    );
+
+    onCapture(converted);
   }
 }
