@@ -10,6 +10,7 @@ class TabWebView extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<TabWebController>(builder: (controller) {
       return Scaffold(
+        backgroundColor: Colors.white,
         resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: SizedBox(
@@ -61,7 +62,7 @@ class TabWebView extends StatelessWidget {
                                         controller.loading();
                                       });
                                     }),
-                            hintText: 'Enter url here...',
+                            hintText: controller.urlCtr.text,
                             hintStyle: const TextStyle(
                               fontSize: 18,
                               color: Colors.grey,

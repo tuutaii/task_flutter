@@ -8,7 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     GetMaterialApp(
-        // showPerformanceOverlay: true,
+        showPerformanceOverlay: false,
         debugShowCheckedModeBanner: false,
         title: "Application",
         initialRoute: AppPages.initial,

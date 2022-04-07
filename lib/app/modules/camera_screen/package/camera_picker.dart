@@ -32,7 +32,10 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
   CameraController? controller;
   TabController? tabController;
   late TabBar tabbar;
-  double _minAvailableZoom = 1.0, _maxAvailableZoom = 1.0, baseZoomLevel = 1.0;
+  double _minAvailableZoom = 1.0,
+      _maxAvailableZoom = 1.0,
+      baseZoomLevel = 1.0,
+      currentZoom = 1.0;
   double _minAvailableExposureOffset = -4.0, _maxAvailableExposureOffset = 4.0;
   final _currentExposureOffset = ValueNotifier(0.0);
   var tabIndex = 0;
@@ -98,10 +101,14 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
     timer = Timer.periodic(const Duration(seconds: 1), (_) => addSeconds());
   }
 
+  void handleScaleStart(ScaleStartDetails details) {
+    baseZoomLevel = currentZoom;
+  }
+
   void handleScale(detail) {
-    final zoom = (baseZoomLevel * detail.scale)
+    currentZoom = (baseZoomLevel * detail.scale)
         .clamp(_minAvailableZoom, _maxAvailableZoom);
-    controller?.setZoomLevel(zoom);
+    controller?.setZoomLevel(currentZoom);
   }
 
   void stopVideoRecording() {
@@ -191,17 +198,19 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
             Expanded(
               child: Stack(
                 children: [
-                  GestureDetector(
-                    onScaleUpdate: handleScale,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ValueListenableBuilder(
-                        valueListenable: cameraId,
-                        builder: (_, __, ___) {
-                          return CameraPreview(controller!);
-                        },
-                      ),
-                    ),
+                  ValueListenableBuilder(
+                    valueListenable: cameraId,
+                    builder: (_, __, ___) {
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onScaleStart: handleScaleStart,
+                        onScaleUpdate: handleScale,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: CameraPreview(controller!),
+                        ),
+                      );
+                    },
                   ),
                   ValueListenableBuilder(
                     valueListenable: _isRecordingInProgress,
