@@ -1,17 +1,25 @@
 # basesource
 
-A new Flutter project.
+A Flutter project with many Function.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+This project have :
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Input Formatter (Custom mask input)
+- Web view (can search and show website)
+- Media Picker :
+  + Show Image, Video from your device.
+  + Preview Imgae, Video (Video Player).
+  + Multi chose Image, Video.
+  + Switch Gallery from your device.
+- Camera picker:
+  + UI Camera.
+  + Can take photo, record video. (Face cam)
+  + Preview Photo, video.
+  + Flash mode.
+  + Zoom mode, Increase Exposure.
+- Profile :
+  + Call API and show as an List User.
+  + Have pagination, loadmore.
 # task_flutter
