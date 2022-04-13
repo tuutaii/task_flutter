@@ -1,14 +1,10 @@
 library media;
 
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'dart:math' as math;
 import 'dart:typed_data';
-
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
-
 part 'media_picker_provider.dart';
 
 class ZoomImageItem {
@@ -19,13 +15,12 @@ class ZoomImageItem {
 }
 
 typedef MulCallback = void Function(List<AssetEntity>);
-
 typedef SingleCallback = void Function(AssetEntity);
 
-class TailtMediaPicker {
-  factory TailtMediaPicker() => _instance;
-  TailtMediaPicker._internal();
-  static final TailtMediaPicker _instance = TailtMediaPicker._internal();
+class PackageMediaPicker {
+  factory PackageMediaPicker() => _instance;
+  PackageMediaPicker._internal();
+  static final PackageMediaPicker _instance = PackageMediaPicker._internal();
 
   static String formatDuration(Duration duration) {
     return <int>[duration.inMinutes, duration.inSeconds]
@@ -36,27 +31,35 @@ class TailtMediaPicker {
   static void picker(
     BuildContext context, {
     RequestType type = RequestType.common,
-    int limited = 10,
+    int limit = 10,
     MulCallback? mulCallback,
     SingleCallback? singleCallback,
     Duration routeDuration = const Duration(milliseconds: 300),
+    Duration minDuration = Duration.zero,
+    Duration maxDuration = const Duration(hours: 1),
     bool isMulti = false,
     bool isReview = false,
     WidgetBuilder? leadingBuilder,
     FilterOptionGroup? filterOptions,
-  }) {}
-
-  static customDuration(Duration duration) {
-    return <int>[duration.inMinutes, duration.inSeconds]
-        .map((int e) => e.remainder(60).toString().padLeft(2, '0'))
-        .join(':');
+  }) async {
+    final isPermission = await PhotoManager.requestPermissionExtend();
+    if (isPermission.isAuth) {
+      final MediaProvider provider = MediaProvider(
+        routeDuration: routeDuration,
+        type: type,
+        isMulti: isMulti,
+        limit: limit,
+        filterOptionGroup: filterOptions,
+        isPreview: isReview,
+        minDuration: minDuration,
+        maxDuration: maxDuration,
+      );
+    } else {
+      PhotoManager.openSetting();
+    }
   }
 
-  static log(dynamic message, {String tag = ''}) {
-    dev.log(message.toString(), name: tag);
-  }
-
-  static Size sizeImgae(
+  static Size sizeImage(
     double currentWidth,
     double currentHeight, {
     required double targetWidth,
@@ -70,32 +73,5 @@ class TailtMediaPicker {
     w = w / be;
     h = h / be;
     return Size(w, h);
-  }
-}
-
-class LoadingCircle extends StatelessWidget {
-  const LoadingCircle({
-    Key? key,
-    this.width = 30.0,
-    this.padding,
-    this.color,
-  }) : super(key: key);
-
-  final double width;
-  final Color? color;
-  final EdgeInsets? padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(8.0),
-        child: SizedBox(
-          width: width,
-          height: width,
-          child: const CircularProgressIndicator(),
-        ),
-      ),
-    );
   }
 }

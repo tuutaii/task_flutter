@@ -1,3 +1,4 @@
+import 'package:basesource/app/modules/media/packages/pages/list_selected_image_page.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -33,9 +34,15 @@ class SelectButton extends StatelessWidget {
           ),
         ),
         onPressed: () {
-          if (items.isNotEmpty) {
-            Navigator.of(context).pop(items);
-          }
+          items.isNotEmpty
+              ? Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => SelectedImageList(
+                            itemsSelected: items,
+                          )),
+                )
+              : {};
         },
       ),
     );

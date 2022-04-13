@@ -200,7 +200,19 @@ class _VideoPageBuilderState extends State<VideoPageBuilder>
                           opacity: _hideStuff ? 0.0 : 1.0,
                           duration: const Duration(milliseconds: 300),
                           child: _buildBottomBar(),
-                        )
+                        ),
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top,
+                        left: 10,
+                        child: GestureDetector(
+                          onTap: () => Navigator.maybePop(context),
+                          child: const Icon(
+                            Icons.arrow_back_ios,
+                            size: 30,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ],
                   )
                 : const Center(child: Text('Load video false')),
@@ -237,7 +249,7 @@ class _VideoPageBuilderState extends State<VideoPageBuilder>
     return Padding(
       padding: const EdgeInsets.only(right: 12.0),
       child: Text(
-        TailtMediaPicker.formatDuration(position),
+        PackageMediaPicker.formatDuration(position),
         style: const TextStyle(
             color: Colors.white,
             fontSize: 12.0,
@@ -255,7 +267,7 @@ class _VideoPageBuilderState extends State<VideoPageBuilder>
     return Padding(
       padding: const EdgeInsets.only(right: 12.0),
       child: Text(
-        '-${TailtMediaPicker.formatDuration(position)}',
+        '-${PackageMediaPicker.formatDuration(position)}',
         style: const TextStyle(
             color: Colors.white,
             fontSize: 12.0,

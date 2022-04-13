@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter/material.dart';
 import '../packages/pages/image_preview_page.dart';
+import '../packages/widgets/button_select.dart';
 import '../packages/widgets/gallery_item.dart';
 import '../packages/widgets/image_thumb_widget.dart';
 import '../packages/pages/video_page.dart';
+import '../packages/widgets/path_list_entity.dart';
 
 class MediaView extends StatefulWidget {
   const MediaView({
@@ -22,26 +24,20 @@ class MediaViewState extends State<MediaView> {
       sizeConstraint: SizeConstraint(ignoreSize: true),
     ),
   );
-  bool isReview = false;
-  bool isMulti = false;
-  AssetPathEntity? _path;
-  AssetEntity? _assetEntity;
+  bool isReview = false, isMulti = false, _isLoading = false;
+  AssetPathEntity? _currentPath;
   List<AssetEntity>? _entities;
-  final pathEntityList = <AssetPathEntity?, Uint8List?>{};
   RequestType type = RequestType.common;
-  int totalEntitesCount = 0;
-  int sizePerPage = 50;
+  int totalAssetCount = 0, sizePerPage = 50, limit = 10, _page = 0;
 
   Duration maxDuration = const Duration(hours: 1);
   Duration minDuration = Duration.zero;
 
-  int _page = 0;
-  bool _isLoading = false;
-  bool _isVideo = false;
+  final selects = ValueNotifier(<AssetEntity>[]);
+  final assets = ValueNotifier(<AssetEntity>[]);
+  final pathEntityList = <AssetPathEntity?, Uint8List?>{};
   final _isLoadingMore = ValueNotifier(false);
-
   final _isSwitchPath = ValueNotifier(false);
-
   final scroll = ScrollController();
   @override
   void initState() {
@@ -52,13 +48,47 @@ class MediaViewState extends State<MediaView> {
         _loadMoreAsset();
       }
     });
+    getAssetPathList();
     super.initState();
   }
 
-  void switchinPath() {
-    if (_assetEntity != null) {
-      _isSwitchPath.value = !_isSwitchPath.value;
+  void switchingPath() {
+    _isSwitchPath.value = !_isSwitchPath.value;
+  }
+
+  void onSelectItem(AssetEntity asset) {
+    final _selected = selects.value.toList();
+    if (isMulti) {
+      if (_selected.length < limit) {
+        if (!_selected.contains(asset)) {
+          _selected.add(asset);
+        } else {
+          _selected.remove(asset);
+        }
+      }
+    } else {
+      setState(() {
+        _selected.clear();
+      });
     }
+    selects.value = _selected.toList();
+  }
+
+  void _loadMoreAsset() {
+    _isLoadingMore.value = true;
+    _currentPath!
+        .getAssetListPaged(
+      page: _page + 1,
+      size: sizePerPage,
+    )
+        .then((value) {
+      setState(() {
+        _entities!.addAll(value);
+        _page++;
+      });
+    }).whenComplete(() {
+      _isLoadingMore.value = false;
+    });
   }
 
   Future<void> _requestAssets(RequestType type) async {
@@ -92,10 +122,10 @@ class MediaViewState extends State<MediaView> {
         return;
       }
       setState(() {
-        _path = paths.first;
+        _currentPath = paths.first;
       });
-      totalEntitesCount = _path!.assetCount;
-      final List<AssetEntity> entities = await _path!.getAssetListPaged(
+      totalAssetCount = _currentPath!.assetCount;
+      final List<AssetEntity> entities = await _currentPath!.getAssetListPaged(
         page: 0,
         size: sizePerPage,
       );
@@ -106,23 +136,6 @@ class MediaViewState extends State<MediaView> {
         });
       }
     }
-  }
-
-  void _loadMoreAsset() {
-    _isLoadingMore.value = true;
-    _path!
-        .getAssetListPaged(
-      page: _page + 1,
-      size: sizePerPage,
-    )
-        .then((value) {
-      setState(() {
-        _entities!.addAll(value);
-        _page++;
-      });
-    }).whenComplete(() {
-      _isLoadingMore.value = false;
-    });
   }
 
   Future<void> getAssetPathList() async {
@@ -143,13 +156,33 @@ class MediaViewState extends State<MediaView> {
         return path1.name.toUpperCase().compareTo(path2.name.toUpperCase());
       },
     );
-    for (var pathEntites in _list) {
-      pathEntityList[pathEntites] = null;
+    for (var pathEntities in _list) {
+      pathEntityList[pathEntities] = null;
       if (type != RequestType.audio) {
-        getFirstThumbFromPathEntity(pathEntites).then((Uint8List? data) {
-          pathEntityList[pathEntites] = data;
+        getFirstThumbFromPathEntity(pathEntities).then((Uint8List? data) {
+          pathEntityList[pathEntities] = data;
         });
       }
+    }
+  }
+
+  Future<void> getAssetsFromEntity(AssetPathEntity pathEntity) async {
+    _isSwitchPath.value = false;
+    if (_currentPath == pathEntity) {
+      return;
+    }
+    _currentPath = pathEntity;
+    totalAssetCount = pathEntity.assetCount;
+
+    final List<AssetEntity> entities = await _currentPath!.getAssetListPaged(
+      page: 0,
+      size: sizePerPage,
+    );
+    if (mounted) {
+      setState(() {
+        _entities = entities;
+        _isLoading = false;
+      });
     }
   }
 
@@ -198,6 +231,7 @@ class MediaViewState extends State<MediaView> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
@@ -217,6 +251,9 @@ class MediaViewState extends State<MediaView> {
                           Switch(
                             value: isMulti,
                             onChanged: (newValue) {
+                              if (!newValue) {
+                                selects.value.clear();
+                              }
                               setState(() => isMulti = newValue);
                             },
                           ),
@@ -228,34 +265,68 @@ class MediaViewState extends State<MediaView> {
                     children: [
                       MaterialButton(
                         child: const Text(
-                          'Image picker',
+                          'All Image picker',
                           style: TextStyle(color: Colors.black),
                         ),
                         onPressed: () {
                           _requestAssets(RequestType.image);
-                          _isVideo = false;
                         },
                       ),
                       MaterialButton(
                         child: const Text(
-                          'Video picker',
+                          'All Video picker',
                           style: TextStyle(color: Colors.black),
                         ),
                         onPressed: () {
                           _requestAssets(RequestType.video);
-                          _isVideo = true;
                         },
                       ),
                     ],
                   ),
                 ],
               ),
-              _path != null
-                  ? GalleryItemWidget(
-                      path: _path!,
-                    )
-                  : const SizedBox(),
-              Expanded(child: buildBody(context)),
+              ValueListenableBuilder(
+                  valueListenable: _isSwitchPath,
+                  builder: (_, bool isSwitchPath, __) {
+                    return _currentPath != null
+                        ? GalleryItemWidget(
+                            isSwitchPath: isSwitchPath,
+                            onTap: () {
+                              switchingPath();
+                              getAssetPathList();
+                            },
+                            path: _currentPath!,
+                          )
+                        : const SizedBox.shrink();
+                  }),
+              ValueListenableBuilder(
+                  valueListenable: _isSwitchPath,
+                  builder: (_, bool isSwitchPath, __) {
+                    if (isSwitchPath) {
+                      log(_currentPath.toString());
+                      return SizedBox(
+                        height: 200,
+                        width: MediaQuery.of(context).size.width * .5,
+                        child: PathListEntity(
+                          pathEntityList: pathEntityList,
+                          changePath: (_currentPath) {
+                            getAssetsFromEntity(_currentPath);
+                          },
+                        ),
+                      );
+                    } else {
+                      return const SizedBox.shrink();
+                    }
+                  }),
+              ValueListenableBuilder(
+                valueListenable: selects,
+                builder: (_, List<AssetEntity> selects, __) {
+                  return SelectButton(isMulti: true, limit: 10, items: selects);
+                },
+              ),
+              Expanded(
+                child: buildBody(context),
+              ),
               ValueListenableBuilder(
                   valueListenable: _isLoadingMore,
                   child: Column(
@@ -278,7 +349,7 @@ class MediaViewState extends State<MediaView> {
   Widget buildBody(BuildContext context) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator.adaptive());
-    } else if (_path == null) {
+    } else if (_currentPath == null) {
       return const Center(child: Text('Request paths first.'));
     }
     return GridView.builder(
@@ -292,31 +363,34 @@ class MediaViewState extends State<MediaView> {
       itemCount: _entities!.length,
       itemBuilder: (BuildContext context, int index) {
         final AssetEntity entity = _entities![index];
-
         return ImageItemWidget(
+          isLimit: selects.value.length,
+          isMulti: isMulti,
           key: UniqueKey(),
           entity: entity,
           thumbnailOption:
               const ThumbnailOption(size: ThumbnailSize.square(200)),
           onTap: () {
-            if (isReview) {
-              _isVideo
-                  ? Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => VideoPageBuilder(
-                                asset: entity,
-                              )),
-                    )
-                  : Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => ImagePreview(
-                                entity: entity,
-                              )),
-                    );
+            if (isReview && !isMulti) {
+              if (entity.type == AssetType.video) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => VideoPageBuilder(
+                            asset: entity,
+                          )),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ImagePreview(
+                            entity: entity,
+                          )),
+                );
+              }
             } else {
-              log('Nothing to show');
+              onSelectItem(entity);
             }
           },
         );
