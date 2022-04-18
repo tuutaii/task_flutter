@@ -6,17 +6,17 @@ class IconButtonCustom extends StatelessWidget {
     this.iconData,
     this.size,
     this.color,
-    this.ontap,
+    this.onTap,
   }) : super(key: key);
   final IconData? iconData;
   final double? size;
   final Color? color;
-  final VoidCallback? ontap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
-        onPressed: ontap,
+        onPressed: onTap,
         icon: Icon(
           iconData,
           color: color ?? Colors.white,

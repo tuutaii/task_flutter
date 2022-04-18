@@ -128,7 +128,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
       try {
         controller!.takePicture().then((value) => file.value = value);
       } on CameraException catch (e) {
-        log('Error occured while taking picture: $e');
+        log('Error occurred while taking picture: $e');
       }
     }
   }
@@ -256,7 +256,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
                                     iconData: isPause
                                         ? Icons.play_circle_fill_rounded
                                         : Icons.pause_circle_rounded,
-                                    ontap: () {
+                                    onTap: () {
                                       if (isPause) {
                                         resumeVideoRecording();
                                         resumeTimer();
@@ -271,7 +271,7 @@ class _CameraPickerCustomState extends State<CameraPickerCustom>
                             } else {
                               return IconButtonCustom(
                                 iconData: CupertinoIcons.switch_camera_solid,
-                                ontap: () {
+                                onTap: () {
                                   if (cameraId.value == 0) {
                                     initCamera(1);
                                   } else {

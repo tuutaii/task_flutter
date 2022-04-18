@@ -265,7 +265,7 @@ class MediaViewState extends State<MediaView> {
                     children: [
                       MaterialButton(
                         child: const Text(
-                          'All Image picker',
+                          'All Image Picker',
                           style: TextStyle(color: Colors.black),
                         ),
                         onPressed: () {
@@ -274,7 +274,7 @@ class MediaViewState extends State<MediaView> {
                       ),
                       MaterialButton(
                         child: const Text(
-                          'All Video picker',
+                          'All Video Picker',
                           style: TextStyle(color: Colors.black),
                         ),
                         onPressed: () {
@@ -366,7 +366,6 @@ class MediaViewState extends State<MediaView> {
         return ImageItemWidget(
           isLimit: selects.value.length,
           isMulti: isMulti,
-          key: UniqueKey(),
           entity: entity,
           thumbnailOption:
               const ThumbnailOption(size: ThumbnailSize.square(200)),
