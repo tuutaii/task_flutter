@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+part of media;
 
 class VideoProgress extends StatefulWidget {
   const VideoProgress(this.controller, {Key? key, required this.seekTo})

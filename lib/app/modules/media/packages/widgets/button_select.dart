@@ -1,6 +1,4 @@
-import 'package:basesource/app/modules/media/packages/pages/list_selected_image_page.dart';
-import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+part of media;
 
 class SelectButton extends StatelessWidget {
   const SelectButton({

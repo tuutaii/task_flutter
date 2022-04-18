@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+part of media;
 
 class SelectedImageList extends StatelessWidget {
   const SelectedImageList({

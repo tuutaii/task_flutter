@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
+part of media;
 
 class ImagePreview extends StatefulWidget {
   const ImagePreview({Key? key, required this.entity}) : super(key: key);
@@ -26,18 +25,6 @@ class _ImagePreviewState extends State<ImagePreview> {
                   isOriginal: true,
                   filterQuality: FilterQuality.none,
                   fit: BoxFit.fill,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 5,
-              left: 10,
-              child: GestureDetector(
-                onTap: () => Navigator.maybePop(context),
-                child: const Icon(
-                  Icons.arrow_back_ios,
-                  size: 30,
-                  color: Colors.white,
                 ),
               ),
             ),

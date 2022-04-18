@@ -15,47 +15,88 @@ class MediaProvider extends ChangeNotifier {
     Future<void>.delayed(routeDuration).then((_) {
       getAssetPathList().whenComplete(() {
         getAssetList();
+        registerObserve(_onLimitedAssetsUpdated);
       });
     });
-    scroll.addListener(loadMoreAsset);
+    scroll.addListener(_listenerLoadMore);
   }
   final FilterOptionGroup? filterOptionGroup;
-  final int limit;
   final RequestType type;
+  final int limit;
   final Duration routeDuration, minDuration, maxDuration;
   final bool isMulti, isPreview;
-  final pathEntityList = <AssetPathEntity?, Uint8List?>{};
   final scroll = ScrollController();
 
-  var selects = ValueNotifier(<AssetEntity>[]);
-  var isLoadingMore = ValueNotifier(false);
-
+  List<AssetEntity> selects = <AssetEntity>[];
   List<AssetEntity> assets = <AssetEntity>[];
-  List<AssetPathEntity> list = <AssetPathEntity>[];
-  List<AssetEntity>? _entities;
+  final pathEntityList = <AssetPathEntity?, Uint8List?>{};
 
   AssetPathEntity? currentPath;
   bool isSwitchingPath = false, isAssetsEmpty = false;
-  int totalEntitiesCount = 0, sizePerPage = 50, page = 0;
+  int totalEntitiesCount = 0;
 
+  bool get hasMoreToLoad => assets.length < totalEntitiesCount;
   int get currentPage => (math.max(1, assets.length) / _pageSize).ceil();
+
   double get position => scroll.position.pixels;
   double get maxScroll => scroll.position.maxScrollExtent;
+  bool get _loadMore => position / maxScroll > 0.33;
+  bool isLoadMore = true;
+  bool _hasAssetsToDisplay = false;
 
-  void loadMoreAsset() {
-    isLoadingMore.value = true;
-    currentPath!
-        .getAssetListPaged(
-      page: page + 1,
-      size: sizePerPage,
-    )
-        .then((value) {
-      _entities!.addAll(value);
-      page++;
+  bool get hasAssetsToDisplay => _hasAssetsToDisplay;
+
+  set hasAssetsToDisplay(bool value) {
+    if (value == _hasAssetsToDisplay) {
+      return;
+    }
+    _hasAssetsToDisplay = value;
+    notifyListeners();
+  }
+
+  void _listenerLoadMore() {
+    if (isLoadMore && _loadMore) {
+      isLoadMore = false;
+      onLoadMore().then((value) => isLoadMore = true);
+    }
+  }
+
+  Future<void> onLoadMore() async {
+    if (hasMoreToLoad) {
+      final items = await currentPath!.getAssetListPaged(
+        page: currentPage,
+        size: _pageSize,
+      );
+      final List<AssetEntity> moreItems = <AssetEntity>[];
+      moreItems.addAll(assets);
+      moreItems.addAll(items);
+      assets = moreItems;
       notifyListeners();
-    }).whenComplete(() {
-      isLoadingMore.value = false;
-    });
+    }
+  }
+
+  void registerObserve([ValueChanged<MethodCall>? callback]) {
+    if (callback == null) {
+      return;
+    }
+    try {
+      PhotoManager.addChangeCallback(callback);
+      PhotoManager.startChangeNotify();
+    } catch (e) {
+      print('Error when registering assets callback: $e');
+    }
+  }
+
+  void _onLimitedAssetsUpdated(MethodCall methodCall) async {
+    if (currentPath != null) {
+      await currentPath?.fetchPathProperties();
+      getAssetFormEntity(currentPath!);
+    }
+  }
+
+  void switchingPath() {
+    isSwitchingPath = !isSwitchingPath;
+    notifyListeners();
   }
 
   Future<void> getAssetPathList() async {
@@ -103,17 +144,20 @@ class MediaProvider extends ChangeNotifier {
 
   Future<void> getAssetFormEntity(AssetPathEntity pathEntity) async {
     isSwitchingPath = false;
-    selects.value = [];
+    selects = [];
     if (currentPath == pathEntity) {
       return;
     }
     currentPath = pathEntity;
     totalEntitiesCount = pathEntity.assetCount;
+
     final items = await pathEntity.getAssetListPaged(
       page: 0,
       size: _pageSize,
     );
     assets = items;
+    _hasAssetsToDisplay = assets.isNotEmpty;
+
     notifyListeners();
   }
 
@@ -150,7 +194,7 @@ class MediaProvider extends ChangeNotifier {
   }
 
   void onSelectItem(AssetEntity asset) {
-    final _selected = selects.value.toList();
+    final _selected = selects.toList();
     if (isMulti) {
       if (_selected.length < limit) {
         if (!_selected.contains(asset)) {
@@ -162,18 +206,15 @@ class MediaProvider extends ChangeNotifier {
     } else {
       _selected.clear();
     }
-    selects.value = _selected.toList();
+    selects = _selected.toList();
+
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    scroll.addListener(() {
-      if (scroll.position.pixels != 0 &&
-          scroll.position.atEdge &&
-          !isLoadingMore.value) {
-        loadMoreAsset();
-      }
-    });
+    registerObserve(_onLimitedAssetsUpdated);
+    scroll.removeListener(_listenerLoadMore);
     super.dispose();
   }
 }

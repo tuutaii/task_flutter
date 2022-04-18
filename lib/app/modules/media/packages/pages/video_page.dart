@@ -1,14 +1,4 @@
-import 'dart:async';
-
-import 'package:basesource/app/modules/media/packages/pages/video_progress.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:photo_manager/photo_manager.dart';
-import 'package:video_player/video_player.dart';
-
-import 'dart:math' as math;
-
-import '../tamp/media_picker.dart';
+part of media;
 
 class VideoPageBuilder extends StatefulWidget {
   const VideoPageBuilder({
@@ -19,7 +9,7 @@ class VideoPageBuilder extends StatefulWidget {
     this.onFinish,
     this.toggleShowAppBar,
   }) : super(key: key);
-  final AssetEntity? asset;
+  final AssetEntity asset;
   final ImageProvider? thumbnail;
   final bool autoPlay;
   final VoidCallback? onFinish;
@@ -59,7 +49,7 @@ class _VideoPageBuilderState extends State<VideoPageBuilder>
 
   Future<void> _initialize() async {
     isLoading = widget.autoPlay;
-    final url = (await widget.asset!.getMediaUrl())!;
+    final url = (await widget.asset.getMediaUrl())!;
     _controller = VideoPlayerController.network(Uri.parse(url).toString());
     setInitState();
     try {
